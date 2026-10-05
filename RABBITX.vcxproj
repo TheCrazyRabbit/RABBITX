@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{ef30644a-b2e6-41dd-b22a-e5248b35b97e}</ProjectGuid>
+    <RootNamespace>RABBITX</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Application;$(ProjectDir)Interface;$(ProjectDir)Core;$(ProjectDir)Core\Models;$(ProjectDir)Core\Context;$(ProjectDir)Engine;$(ProjectDir)Engine\Pipeline;$(ProjectDir)Engine\Probe;$(ProjectDir)Engine\Intelligence;$(ProjectDir)Engine\Analysis;$(ProjectDir)Infrastructure;$(ProjectDir)Infrastructure\Network;$(ProjectDir)Infrastructure\Security;$(ProjectDir)Report</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Application;$(ProjectDir)Interface;$(ProjectDir)Core;$(ProjectDir)Core\Models;$(ProjectDir)Core\Context;$(ProjectDir)Engine;$(ProjectDir)Engine\Pipeline;$(ProjectDir)Engine\Probe;$(ProjectDir)Engine\Intelligence;$(ProjectDir)Engine\Analysis;$(ProjectDir)Infrastructure;$(ProjectDir)Infrastructure\Network;$(ProjectDir)Infrastructure\Security;$(ProjectDir)Report</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Application;$(ProjectDir)Interface;$(ProjectDir)Core;$(ProjectDir)Core\Models;$(ProjectDir)Core\Context;$(ProjectDir)Engine;$(ProjectDir)Engine\Pipeline;$(ProjectDir)Engine\Probe;$(ProjectDir)Engine\Intelligence;$(ProjectDir)Engine\Analysis;$(ProjectDir)Infrastructure;$(ProjectDir)Infrastructure\Network;$(ProjectDir)Infrastructure\Security;$(ProjectDir)Report</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Application;$(ProjectDir)Interface;$(ProjectDir)Core;$(ProjectDir)Core\Models;$(ProjectDir)Core\Context;$(ProjectDir)Engine;$(ProjectDir)Engine\Pipeline;$(ProjectDir)Engine\Probe;$(ProjectDir)Engine\Intelligence;$(ProjectDir)Engine\Analysis;$(ProjectDir)Infrastructure;$(ProjectDir)Infrastructure\Network;$(ProjectDir)Infrastructure\Security;$(ProjectDir)Report</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Core\Context\request_budget.cpp" />
+    <ClCompile Include="Core\Context\request_rate_limiter.cpp" />
+    <ClCompile Include="Core\Context\audit_configuration.cpp" />
+    <ClCompile Include="Report\project_store.cpp" />
+    <ClCompile Include="Report\html_reporter.cpp" />
+    <ClCompile Include="Core\Models\probe_result.cpp" />
+    <ClCompile Include="Engine\Analysis\analyzer.cpp" />
+    <ClCompile Include="Interface\cli.cpp" />
+    <ClCompile Include="Interface\config_loader.cpp" />
+    <ClCompile Include="Interface\console_ui.cpp" />
+    <ClCompile Include="Core\Models\endpoint.cpp" />
+    <ClCompile Include="Engine\Intelligence\endpoint_intelligence.cpp" />
+    <ClCompile Include="Engine\Intelligence\endpoint_risk_engine.cpp" />
+    <ClCompile Include="Core\Models\evidence.cpp" />
+    <ClCompile Include="Core\Models\finding.cpp" />
+    <ClCompile Include="Infrastructure\Network\http_client.cpp" />
+    <ClCompile Include="Report\json_reporter.cpp" />
+    <ClCompile Include="Application\main.cpp" />
+    <ClCompile Include="Core\Models\parameter.cpp" />
+    <ClCompile Include="Engine\Intelligence\parameter_intelligence.cpp" />
+    <ClCompile Include="Engine\Pipeline\pipeline.cpp" />
+    <ClCompile Include="Core\Models\probe.cpp" />
+    <ClCompile Include="Engine\Probe\probe_engine.cpp" />
+    <ClCompile Include="Engine\Probe\probe_executor.cpp" />
+    <ClCompile Include="Engine\Probe\probe_plan.cpp" />
+    <ClCompile Include="Engine\Probe\probe_planner.cpp" />
+    <ClCompile Include="Infrastructure\Security\security_checks.cpp" />
+    <ClCompile Include="Infrastructure\Security\scope_policy.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Core\Context\request_budget.h" />
+    <ClInclude Include="Core\Context\request_rate_limiter.h" />
+    <ClInclude Include="Core\Context\audit_configuration.h" />
+    <ClInclude Include="Core\Context\project_context.h" />
+    <ClInclude Include="Report\project_store.h" />
+    <ClInclude Include="Report\html_reporter.h" />
+    <ClInclude Include="Core\Models\probe_result.h" />
+    <ClInclude Include="Engine\Analysis\analyzer.h" />
+    <ClInclude Include="Core\Context\audit_context.h" />
+    <ClInclude Include="Interface\cli.h" />
+    <ClInclude Include="Interface\config_loader.h" />
+    <ClInclude Include="Interface\console_ui.h" />
+    <ClInclude Include="Core\Models\endpoint.h" />
+    <ClInclude Include="Engine\Intelligence\endpoint_intelligence.h" />
+    <ClInclude Include="Engine\Intelligence\endpoint_risk_engine.h" />
+    <ClInclude Include="Core\Models\evidence.h" />
+    <ClInclude Include="Core\Models\finding.h" />
+    <ClInclude Include="Infrastructure\Network\http_client.h" />
+    <ClInclude Include="Report\json_reporter.h" />
+    <ClInclude Include="Core\Models\parameter.h" />
+    <ClInclude Include="Engine\Intelligence\parameter_intelligence.h" />
+    <ClInclude Include="Engine\Pipeline\pipeline.h" />
+    <ClInclude Include="Core\Models\probe.h" />
+    <ClInclude Include="Engine\Probe\probe_engine.h" />
+    <ClInclude Include="Engine\Probe\probe_executor.h" />
+    <ClInclude Include="Engine\Probe\probe_plan.h" />
+    <ClInclude Include="Engine\Probe\probe_planner.h" />
+    <ClInclude Include="Engine\Probe\probe_task.h" />
+    <ClInclude Include="Infrastructure\Security\security_checks.h" />
+    <ClInclude Include="Infrastructure\Security\scope_policy.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

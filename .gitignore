@@ -1,0 +1,24 @@
+﻿.vs/
+x64/
+Debug/
+Release/
+dist/
+
+*.pdb
+*.obj
+*.ilk
+*.idb
+*.tlog
+*.lastbuildstate
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# Local audit/project data
+*.audit.json
+*.project.json
+
+# Temporary/log files
+*.tmp
+*.log
