@@ -20,7 +20,9 @@ This is a CLI beta, not a hosted service. AI triage and account or license manag
 
 ## Windows download
 
-The portable x64 archive is `dist/RABBITX-v0.8.0-beta-windows-x64.zip`; its SHA-256 sidecar is next to it. Extract it and open PowerShell in the extracted folder. The archive includes `RABBITX.exe`, this guide, the example configuration, the local demo server, and a sample HTML report.
+Download the [RABBITX v0.8.0 Beta Windows x64 archive](https://github.com/TheCrazyRabbit/RABBITX/releases/download/v0.8.0-beta/RABBITX-v0.8.0-beta-windows-x64.zip). The SHA-256 sidecar is available from the same GitHub Release.
+
+Extract the archive and open PowerShell in the extracted folder. The archive includes `RABBITX.exe`, this guide, the example configuration, the local demo server, and a sample HTML report.
 
 The release binary targets Windows x64 and statically links the MSVC runtime. It uses Windows WinHTTP for network requests and does not bundle third-party scanning libraries.
 
@@ -57,7 +59,7 @@ Create and resume a project:
 Load a JSON configuration. Project defaults are applied first, then the file, then CLI options. A resume uses those values for that run without changing the saved defaults.
 
 ```powershell
-.\RABBITX.exe --config .\examples\rabbitx.example.json
+.\RABBITX.exe --config .\examples\rabbitx.example.json https://authorized.example
 ```
 
 That sample is deliberately scoped to the local demo server. For an authorized external target, edit both `targetUrl` and the allowlisted host/domain/path values. See [the configuration guide](docs/CONFIGURATION.md).
@@ -91,7 +93,7 @@ Feedback that is most useful:
 
 ## Responsible use
 
-Use RABBITX only on systems you own or have written authorization to assess. Respect program scope, request limits, rate limits, and disclosure rules. Stop if an owner or program asks you to stop. Do not use the demo cases against public targets.
+Use RABBITX only on systems you own or are explicitly authorized to assess, including targets covered by an applicable bug bounty or security testing policy. Respect program scope, request limits, rate limits, and disclosure rules. Stop if an owner or program asks you to stop. Do not use the demo cases against public targets.
 
 ## Project status
 
