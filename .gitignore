@@ -22,3 +22,5 @@ dist/
 # Temporary/log files
 *.tmp
 *.log
+
+work/
