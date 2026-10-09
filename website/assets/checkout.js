@@ -5,6 +5,9 @@
 const PADDLE_CLIENT_TOKEN = "test_29fd7d63174276d00fc0fa9bb8c";
 const RABBITX_PRO_PRICE_ID = "pri_01m4crb2b3tqxc3d5hwmqyg0f8";
 
+const TOKEN_PLACEHOLDER = "PASTE_TEST_CLIENT_TOKEN_HERE";
+const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
+
 (() => {
   const button = document.getElementById("open-test-checkout");
   const status = document.getElementById("checkout-status");
@@ -29,8 +32,10 @@ const RABBITX_PRO_PRICE_ID = "pri_01m4crb2b3tqxc3d5hwmqyg0f8";
 
   // Detect only the original configuration placeholders.
   if (
-    PADDLE_CLIENT_TOKEN === "PASTE_TEST_CLIENT_TOKEN_HERE" ||
-    RABBITX_PRO_PRICE_ID === "PASTE_SANDBOX_PRICE_ID_HERE"
+    !PADDLE_CLIENT_TOKEN ||
+    !RABBITX_PRO_PRICE_ID ||
+    PADDLE_CLIENT_TOKEN === TOKEN_PLACEHOLDER ||
+    RABBITX_PRO_PRICE_ID === PRICE_PLACEHOLDER
   ) {
     setStatus("Paddle Sandbox credentials not configured.");
     return;
