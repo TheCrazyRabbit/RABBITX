@@ -1,0 +1,6 @@
+{
+  "name": "rabbitx-backend",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/worker.test.js" }
+}

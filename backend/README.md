@@ -14,36 +14,36 @@ Required Cloudflare settings:
 - D1 binding DB → existing rabbitx-entitlements-live, with the existing subscriptions and webhook_events tables.
 - Secret PADDLE_LIVE_WEBHOOK_SECRET → endpoint secret for the existing Paddle Live notification destination. Never place its value in source, Git, logs or the website. It is neither a client-side token nor an API key.
 
-## Deploy using Wrangler (read-only dashboard editor is not needed)
+## Verified deployment (11 October 2026)
 
-The agent checked Wrangler authentication on 11 October 2026: not authenticated. These instructions require logging in as a user authorized to deploy the existing Worker. Do not deploy to a temporary preview account; it would not update api.crazyrabbit.dev.
+The Live Worker has been deployed to the existing rabbitx-backend and api.crazyrabbit.dev.
 
-Use a terminal with Node.js/npm installed:
+- Active version: 09f15d1e-a79c-4e29-9a7a-3e288aaa4868 (100%).
+- Actual D1 binding verified after deploy: DB → rabbitx-entitlements-live, ID 2b0518a0-f1b4-4e98-baa0-6001128f67f4. The previous binding name was DB_LIVE; deployment corrected its name without changing the database or data.
+- PADDLE_LIVE_WEBHOOK_SECRET verified present by metadata only. No secret value was retrieved or stored. An older unused Secret remains untouched.
+- D1 read-only table check confirmed subscriptions and webhook_events exist.
+- GET / returned 200 with health JSON.
+- Unsigned POST /webhooks/paddle/live returned 400 with Paddle-Signature header is required.
+- Removed routes returned 404.
+- Official tail invocation logs confirmed GET / (200) and POST /webhooks/paddle/live (400), scriptName rabbitx-backend, outcome ok. Wrangler's Node WebSocket timed out, so the same official tail stream was verified through browser networking and the temporary tail was deleted. No request headers, signatures or bodies were logged in the verification output.
+- A signed Paddle Live notification has not been sent by this deployment task. This is the remaining end-to-end validation step; no paid transaction was created.
+
+## Repeat deployment using Wrangler
+
+backend/wrangler.jsonc now contains the verified existing account, Worker, Live D1 ID, existing custom domain, observability, workers.dev and preview settings. It contains no Secret values. No dashboard code editor is required.
+
+From repository root:
 
 ```powershell
-npx wrangler login
 npx wrangler whoami
+node --test backend/tests/worker.test.js
+npx wrangler deploy --config backend/wrangler.jsonc --dry-run
+npx wrangler deploy --config backend/wrangler.jsonc --keep-vars
+npx wrangler deployments status --config backend/wrangler.jsonc
+npx wrangler secret list --config backend/wrangler.jsonc
 ```
 
-Export the existing Worker's configuration into an empty scratch directory outside the repository, preserving its actual account, D1 database ID, compatibility settings and domain configuration:
-
-```powershell
-$deployRoot = Join-Path $env:TEMP ("rabbitx-live-deploy-" + [guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $deployRoot | Out-Null
-Set-Location -LiteralPath $deployRoot
-npx wrangler init --from-dash rabbitx-backend
-Set-Location -LiteralPath (Join-Path $deployRoot 'rabbitx-backend')
-```
-
-Inspect the generated wrangler.jsonc or wrangler.toml. Confirm name is rabbitx-backend; binding is DB; database_name is rabbitx-entitlements-live; database_id matches that database. Confirm existing custom domain api.crazyrabbit.dev is preserved. Do not create a new database or run migrations. Use `npx wrangler secret list --name rabbitx-backend` to confirm PADDLE_LIVE_WEBHOOK_SECRET exists (lists metadata only). The already configured secret does not need to be re-entered.
-
-Deploy the repository's source as the entrypoint, using the exported configuration in the current directory:
-
-```powershell
-npx wrangler deploy "D:\幻灵末士\C and C++\RABBITX\RABBITX\backend\worker.js" --name rabbitx-backend --keep-vars
-```
-
-The positional file overrides the exported main entrypoint. --keep-vars preserves dashboard variables; existing Secrets are preserved by Wrangler deployment. This flag does not replace the need to verify D1/domain bindings in the exported configuration. Only proceed with the existing Worker/account/database confirmed. Exported settings, credentials and deployment scratch files must not be committed.
+Only run wrangler login if authentication has expired. --keep-vars preserves dashboard variables; existing Secrets are preserved by deployment. The explicit D1 and domain configuration must continue to match the existing resources. Do not deploy to a temporary account, create a new Worker or database, or run migrations. runtime .wrangler files and credential files must not be committed.
 
 ## Paddle Live destination and verification
 
