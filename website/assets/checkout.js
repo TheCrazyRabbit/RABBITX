@@ -5,8 +5,8 @@
 const PADDLE_CLIENT_TOKEN = "live_1ce5cfd0750b4873b5a6fadb116";
 const RABBITX_PRO_PRICE_ID = "pri_01m4keg9gs2tx03q6f2mk8nvfa";
 
-const TOKEN_PLACEHOLDER = "live_1ce5cfd0750b4873b5a6fadb116";
-const PRICE_PLACEHOLDER = "pri_01m4keg9gs2tx03q6f2mk8nvfa";
+const TOKEN_PLACEHOLDER = "PASTE_LIVE_CLIENT_TOKEN_HERE";
+const PRICE_PLACEHOLDER = "PASTE_LIVE_PRICE_ID_HERE";
 
 (() => {
   const button = document.getElementById("subscribe-checkout");
