@@ -4,11 +4,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createAuthHandler, digest, pruneAuth, resolveEntitlement, sendCode } from '../entitlements.js';
 import worker from '../worker.js';
+import { configurationIssues } from '../configuration.js';
 const NOW = 1800000000;
 const iso = t => new Date(t * 1000).toISOString();
 function fixture() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(readFileSync(new URL('../migrations/0001_entitlements.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0002_live_acceptance.sql', import.meta.url), 'utf8'));
   const db = { sqlite, fail: false, failBatch: false, prepare(sql) {
     return { sql, args: [], bind(...args) { this.args = args; return this; },
       async first() { if (db.fail) throw Error('DB'); return sqlite.prepare(sql).get(...this.args) ?? null; },
@@ -19,8 +21,8 @@ function fixture() {
     catch (e) { sqlite.exec('ROLLBACK'); throw e; }
   }};
   let clock = NOW, mail, failingMail = false, failingNetwork = false;
-  const env = { DB: db, AUTH_ENABLED: 'true', AUTH_HASH_SECRET: 'x'.repeat(32), RESEND_API_KEY: 'mock-only',
-    AUTH_MAIL_FROM: 'RABBITX <test@example.com>', PADDLE_API_KEY: 'mock-only', PRO_PRICE_IDS: 'pri_pro' };
+  const env = { DB: db, AUTH_ENABLED: 'true', AUTH_HASH_SECRET: 'x'.repeat(32), RESEND_API_KEY: 're_mock_only',
+    AUTH_MAIL_FROM: 'RABBITX <test@example.com>', PADDLE_API_KEY: `pdl_live_apikey_${'a'.repeat(26)}_${'b'.repeat(22)}_ccc`, PRO_PRICE_IDS: 'pri_pro' };
   const data = {
     customers: [{ id: 'ctm_owner', status: 'active', email: 'owner@example.com' }],
     subscriptions: [{ id: 'sub_owner', customer_id: 'ctm_owner', status: 'active', items: [{ price: { id: 'pri_pro' }, quantity: 1 }],
@@ -33,7 +35,9 @@ function fixture() {
   const fetcher = async (url, options) => {
     if (failingNetwork) throw Error('Offline');
     const u = new URL(url); calls.push(u); assert.equal(u.origin, 'https://api.paddle.com');
-    assert.equal(options.headers.Authorization, 'Bearer mock-only');
+    assert.equal(options.headers.Authorization, `Bearer ${env.PADDLE_API_KEY}`);
+    assert.equal(options.headers['Paddle-Version'], '1');
+    if (u.pathname.startsWith('/discounts/')) return Response.json({ data: data.discount });
     return Response.json({ data: data[u.pathname.slice(1)], meta: { pagination: { has_more: false, next: null } } });
   };
   const handler = createAuthHandler({ fetcher, clock: () => clock,
@@ -47,10 +51,102 @@ function fixture() {
   return { db, env, data, call, start, finish, login, fetcher, calls, mail: () => mail, time: t => clock = t,
     failMail: () => failingMail = true, failNetwork: () => failingNetwork = true };
 }
+async function zeroAcceptance() {
+  const f = fixture();
+  f.env.LIVE_ACCEPTANCE_ENABLED = 'true';
+  f.env.AUTH_TEST_EMAIL_SHA256 = await digest('owner@example.com');
+  const txn = f.data.transactions[0];
+  txn.discount_id = 'dsc_acceptance'; txn.currency_code = 'USD'; txn.billed_at = iso(NOW - 100); txn.payments = [];
+  txn.details.totals = { grand_total: '0' };
+  txn.items[0].price.unit_price = { amount: '2400', currency_code: 'USD' };
+  txn.items[0].price.billing_cycle = { interval: 'month', frequency: 1 };
+  txn.details.line_items[0] = { price_id: 'pri_pro', quantity: 1, totals: { subtotal: '2400', discount: '2400', total: '0', tax: '0' } };
+  f.data.discount = { id: 'dsc_acceptance', status: 'active', type: 'percentage', amount: '100', recur: false,
+    usage_limit: 1, times_used: 1, restrict_to: ['pri_pro'], created_at: iso(NOW - 200), expires_at: iso(NOW + 1000) };
+  f.db.sqlite.prepare(`INSERT INTO live_acceptance_grants VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run('grant_test',
+    await digest('owner@example.com'), 'ctm_owner', 'sub_owner', 'txn_owner', 'pri_pro', 'dsc_acceptance',
+    NOW - 10, NOW + 600, null, 'paddle_live_acceptance', 'fixture-owner-confirmation');
+  return f;
+}
+test('configuration rejects browser/Sandbox keys, placeholders and malformed sender; diagnostics contain no credentials', () => {
+  const f = fixture(); assert.deepEqual(configurationIssues(f.env), []);
+  for (const token of ['live_client_side', 'test_browser', 'pdl_sdbx_apikey_example', 'PASTE_PADDLE_KEY']) {
+    assert.ok(configurationIssues({ ...f.env, PADDLE_API_KEY: token }).some(x => x.startsWith('PADDLE_API_KEY')));
+  }
+  for (const from of ['bad', 'auth@example.com>', 'Crazy <auth@example.com', 'auth@example.com\r\nBcc: stranger@example.com'])
+    assert.ok(configurationIssues({ ...f.env, AUTH_MAIL_FROM: from }).some(x => x.startsWith('AUTH_MAIL_FROM')));
+  assert.ok(!JSON.stringify(configurationIssues({ ...f.env, PRO_PRICE_IDS: 'PASTE_LIVE_PRICE_ID_HERE' })).includes(f.env.PADDLE_API_KEY));
+});
+test('approved exact zero transaction grants short diagnostic Pro with acceptance mode, never a paid grant', async () => {
+  const f = await zeroAcceptance(), token = await f.login();
+  const r = await f.call('/v1/features/pro-foundation/check', '', token);
+  assert.equal(r.status, 200); const body = await r.json();
+  assert.equal(body.tier, 'Pro'); assert.equal(body.reason, 'live_acceptance_only'); assert.equal(body.authorization_mode, 'acceptance');
+  assert.equal(body.valid_until, NOW + 600); assert.equal(body.commercial_feature, false);
+  assert.equal(r.headers.get('X-RABBITX-Authorization-Mode'), 'acceptance');
+});
+
+test('restricted acceptance mailbox has no redeemable login for others and rejects previously issued sessions', async () => {
+  const f = await zeroAcceptance();
+  const unknown = await f.start('stranger@example.com');
+  assert.equal(f.mail(), undefined);
+  assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) n FROM auth_challenges').get().n, 0);
+  assert.equal((await f.call('/v1/auth/finish', { challenge_id: unknown.challenge_id, code: '12345678' })).status, 401);
+  const token = await f.login();
+  f.env.AUTH_TEST_EMAIL_SHA256 = await digest('other@example.com');
+  assert.equal((await f.call('/v1/entitlement', undefined, token)).status, 401);
+  assert.equal((await f.call('/v1/auth/logout', '', token)).status, 200);
+  delete f.env.AUTH_TEST_EMAIL_SHA256;
+  assert.equal((await f.call('/v1/auth/start', { email: 'owner@example.com' })).status, 503);
+});
+test('zero acceptance rejects missing switch/grant, different verified mailbox, customer/subscription/transaction and discount', async () => {
+  for (const mutate of [
+    f => f.env.LIVE_ACCEPTANCE_ENABLED = 'false', f => delete f.env.LIVE_ACCEPTANCE_ENABLED,
+    f => delete f.env.AUTH_TEST_EMAIL_SHA256,
+    f => f.db.sqlite.exec('DELETE FROM live_acceptance_grants'),
+    f => f.db.sqlite.exec("UPDATE live_acceptance_grants SET email_hash='" + 'a'.repeat(64) + "'"),
+    f => f.db.sqlite.exec("UPDATE live_acceptance_grants SET customer_id='ctm_other'"),
+    f => f.db.sqlite.exec("UPDATE live_acceptance_grants SET subscription_id='sub_other'"),
+    f => f.db.sqlite.exec("UPDATE live_acceptance_grants SET transaction_id='txn_other'"),
+    f => f.db.sqlite.exec("UPDATE live_acceptance_grants SET price_id='pri_other'"),
+    f => f.data.transactions[0].discount_id = 'dsc_other',
+    f => f.data.discount.amount = '99', f => f.data.discount.recur = true,
+    f => f.data.discount.usage_limit = null, f => f.data.discount.times_used = 2,
+    f => f.data.discount.restrict_to = null, f => f.data.discount.restrict_to = ['pri_pro','pri_other'],
+    f => f.data.discount.expires_at = iso(NOW + 86400),
+    f => f.data.transactions[0].details.totals.grand_total = '1',
+    f => f.data.transactions[0].payments = [{ amount: '2400', status: 'captured' }],
+    f => f.data.transactions[0].items.push(f.data.transactions[0].items[0]),
+    f => f.data.transactions[0].items[0].price.billing_cycle.frequency = 12,
+    f => f.data.subscriptions[0].status = 'canceled',
+    f => f.data.adjustments.push({ action: 'refund', status: 'approved', transaction_id: 'txn_owner' })
+  ]) { const f = await zeroAcceptance(); mutate(f); assert.equal((await resolveEntitlement('owner@example.com', f.env, f.fetcher, NOW)).tier, 'Free'); }
+});
+test('acceptance expiry/revocation denies next check; ordinary paid grant wins over acceptance', async () => {
+  const f = await zeroAcceptance(), token = await f.login();
+  assert.equal((await f.call('/v1/features/pro-foundation/check', '', token)).status, 200);
+  f.time(NOW + 600); assert.equal((await f.call('/v1/features/pro-foundation/check', '', token)).status, 403); f.time(NOW);
+  f.db.sqlite.exec('UPDATE live_acceptance_grants SET revoked_at=1800000000');
+  assert.equal((await f.call('/v1/features/pro-foundation/check', '', token)).status, 403);
+  f.db.sqlite.exec('UPDATE live_acceptance_grants SET revoked_at=NULL');
+  const paid = fixture().data.transactions[0]; paid.id = 'txn_paid';
+  f.data.transactions.push(paid);
+  assert.equal((await (await f.call('/v1/entitlement', undefined, token)).json()).authorization_mode, 'paid');
+});
+test('missing acceptance schema and unavailable discount API fail closed; no ordinary zero invoice gains access', async () => {
+  const f = await zeroAcceptance(), token = await f.login(); f.db.sqlite.exec('DROP TABLE live_acceptance_grants');
+  assert.equal((await f.call('/v1/features/pro-foundation/check', '', token)).status, 503);
+  const g = await zeroAcceptance();
+  await assert.rejects(resolveEntitlement('owner@example.com', g.env, async (url, opts) => url.includes('/discounts/') ? new Response('', { status: 403 }) : g.fetcher(url, opts), NOW));
+  g.env.LIVE_ACCEPTANCE_ENABLED = 'false'; g.db.sqlite.exec('DROP TABLE live_acceptance_grants');
+  assert.equal((await resolveEntitlement('owner@example.com', g.env, g.fetcher, NOW)).tier, 'Free');
+});
 test('migration additive/repeatable preserves webhook data', () => {
   const db = new DatabaseSync(':memory:');
   db.exec("CREATE TABLE subscriptions(id TEXT); INSERT INTO subscriptions VALUES('existing'); CREATE TABLE webhook_events(id TEXT); INSERT INTO webhook_events VALUES('existing');");
-  const sql = readFileSync(new URL('../migrations/0001_entitlements.sql', import.meta.url), 'utf8'); db.exec(sql); db.exec(sql);
+  for (const file of ['0001_entitlements.sql', '0002_live_acceptance.sql']) {
+    const sql = readFileSync(new URL('../migrations/' + file, import.meta.url), 'utf8'); db.exec(sql); db.exec(sql);
+  }
   assert.equal(db.prepare('SELECT COUNT(*) n FROM subscriptions').get().n, 1); assert.equal(db.prepare('SELECT COUNT(*) n FROM webhook_events').get().n, 1);
 });
 test('service disabled/missing config, HTTPS, CORS, invalid/large input and missing token', async () => {

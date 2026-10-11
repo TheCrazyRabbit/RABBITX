@@ -1,0 +1,7 @@
+{
+  "AUTH_ENABLED": "false",
+  "LIVE_ACCEPTANCE_ENABLED": "false",
+  "AUTH_MAIL_FROM": "Crazy Rabbit <auth@auth.crazyrabbit.dev>",
+  "PRO_PRICE_IDS": "PASTE_LIVE_MONTHLY_PRICE_ID_HERE",
+  "AUTH_TEST_EMAIL_SHA256": ""
+}

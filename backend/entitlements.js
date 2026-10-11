@@ -1,3 +1,5 @@
+import { configurationIssues } from './configuration.js';
+import { acceptanceEntitlement } from './live-acceptance.js';
 // No webhook payload or caller-supplied Paddle ID is an entitlement authority.
 const enc = new TextEncoder();
 const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -75,7 +77,7 @@ async function listPaddle(path, query, env, fetcher) {
   url.searchParams.set('per_page', '50');
   const output = [];
   for (let page = 0; page < 10; page++) {
-    const result = await fetcher(url.href, { headers: { Authorization: `Bearer ${env.PADDLE_API_KEY}` },
+    const result = await fetcher(url.href, { headers: { Authorization: `Bearer ${env.PADDLE_API_KEY}`, 'Paddle-Version': '1' },
       redirect: 'error', signal: AbortSignal.timeout(8000) });
     if (!result.ok) throw new Error('billing unavailable');
     const body = await result.json();
@@ -119,11 +121,15 @@ export async function resolveEntitlement(email, env, fetcher = fetch, now = nowS
         // Require a nonzero, actually captured Pro line, not merely a completed $0 invoice.
         const paidLine = transaction.details?.line_items?.some(line => prices.has(line.price_id) && /^\d+$/.test(line.totals?.total) && BigInt(line.totals.total) > 0n);
         const captured = transaction.payments?.some(p => p.status === 'captured' && /^\d+$/.test(p.amount) && BigInt(p.amount) > 0n);
-        if (!paidLine || !captured) continue;
         // Conservative: any approved refund/credit or unresolved dispute on this paid period denies it.
         if (adjustments.some(a => a.transaction_id === transaction.id &&
           (a.status === 'approved' && ['refund', 'credit'].includes(a.action) ||
            ['chargeback', 'chargeback_warning'].includes(a.action) && a.status !== 'reversed'))) continue;
+        if (!paidLine || !captured) {
+          const acceptance = await acceptanceEntitlement(email, customer, sub, transaction, env, fetcher, now);
+          if (acceptance && best.tier !== 'Pro') best = acceptance;
+          continue;
+        }
         let paidEnd = epoch(transaction.billing_period?.ends_at);
         let paidStart = epoch(transaction.billing_period?.starts_at);
         if (!paidStart || !paidEnd) {
@@ -144,7 +150,7 @@ export async function resolveEntitlement(email, env, fetcher = fetch, now = nowS
         }
         const end = sub.status === 'active' ? Math.min(paidEnd, epoch(sub.current_billing_period?.ends_at)) : paidEnd;
         if (!paidStart || paidStart > now || end <= now) { if (best.tier !== 'Pro') best = { ...free, reason: 'expired' }; continue; }
-        if (end > (best.valid_until || 0)) best = { tier: 'Pro', reason: 'verified_paid_period', valid_until: end,
+        if (best.authorization_mode === 'acceptance' || end > (best.valid_until || 0)) best = { tier: 'Pro', reason: 'verified_paid_period', authorization_mode: 'paid', valid_until: end,
           subscription_id: sub.id, customer_id: customer.id };
       }
     }
@@ -159,15 +165,14 @@ export function createAuthHandler({ fetcher = fetch, mailer = sendCode, clock = 
     if (url.protocol !== 'https:') return response(400, { error: 'HTTPS required' });
     // Native CLI only: browsers cannot invoke sensitive routes cross-origin.
     if (request.headers.has('Origin')) return response(403, { error: 'Browser origin not allowed' });
-    if (env.AUTH_ENABLED !== 'true' || !env.DB || env.AUTH_HASH_SECRET?.length < 32 || !env.AUTH_HASH_SECRET ||
-        !env.PADDLE_API_KEY || !env.RESEND_API_KEY || !env.AUTH_MAIL_FROM ||
-        !/^pri_[a-z0-9]+(\s*,\s*pri_[a-z0-9]+)*$/i.test(env.PRO_PRICE_IDS || '')) {
+    if (env.AUTH_ENABLED !== 'true' || configurationIssues(env).length) {
       return response(503, { error: 'Account service is not enabled' });
     }
     const allowed = { '/v1/auth/start': 'POST', '/v1/auth/finish': 'POST', '/v1/session': 'GET',
       '/v1/entitlement': 'GET', '/v1/features/pro-foundation/check': 'POST', '/v1/auth/logout': 'POST' };
     if (allowed[path] !== request.method) return response(404, { error: 'Not found' });
     const db = env.DB, now = clock();
+    const permittedEmail = async email => !env.AUTH_TEST_EMAIL_SHA256 || await digest(email) === env.AUTH_TEST_EMAIL_SHA256;
     try {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const ipBucket = await keyed(env.AUTH_HASH_SECRET, `ip:${ip}`);
@@ -181,6 +186,8 @@ export function createAuthHandler({ fetcher = fetch, mailer = sendCode, clock = 
         const startBucket = await keyed(env.AUTH_HASH_SECRET, `start:${ip}`);
         if (await limited(db, emailBucket, 3, now) || await limited(db, startBucket, 10, now)) return response(429, { error: 'Try again later' });
         const challenge = random(), code = otp(), hash = await keyed(env.AUTH_HASH_SECRET, `${challenge}:${code}`);
+        // Restricted rollout: same response shape for other mailboxes, no mail or redeemable challenge.
+        if (!await permittedEmail(email)) return response(200, { challenge_id: challenge, message: 'Check your email for a sign-in code' }, { 'X-RABBITX-Challenge': challenge });
         await db.prepare('INSERT INTO auth_challenges(challenge_id,email,code_hash,expires_at) VALUES (?,?,?,?)')
           .bind(challenge, email, hash, now + 600).run();
         try { await mailer(env, email, code, challenge, fetcher); }
@@ -195,7 +202,7 @@ export function createAuthHandler({ fetcher = fetch, mailer = sendCode, clock = 
         const challenge = await db.prepare(`UPDATE auth_challenges SET attempts=attempts+1
           WHERE challenge_id=? AND expires_at>? AND consumed_hash IS NULL AND attempts<5 RETURNING *`)
           .bind(input.challenge_id, now).first();
-        if (!challenge || !await codeMatches(env.AUTH_HASH_SECRET, input.challenge_id, input.code, challenge.code_hash)) return response(401, { error: 'Code invalid or expired' });
+        if (!challenge || !await permittedEmail(challenge.email) || !await codeMatches(env.AUTH_HASH_SECRET, input.challenge_id, input.code, challenge.code_hash)) return response(401, { error: 'Code invalid or expired' });
         const token = random(), hash = await digest(token);
         await db.batch([
           db.prepare('UPDATE auth_challenges SET consumed_hash=? WHERE challenge_id=? AND consumed_hash IS NULL AND expires_at>?')
@@ -216,6 +223,7 @@ export function createAuthHandler({ fetcher = fetch, mailer = sendCode, clock = 
         await db.prepare('UPDATE auth_sessions SET revoked_at=? WHERE token_hash=?').bind(now, hash).run();
         return response(200, { ok: true });
       }
+      if (!await permittedEmail(session.email)) return response(401, { error: 'Session expired or revoked; sign in again' });
       if (url.search || request.method === 'POST' && await hasBody(request)) return response(400, { error: 'Caller-supplied subscription data is not accepted' });
       if (path === '/v1/session') return response(200, { signed_in: true });
       if (await limited(db, `check:${hash}`, 60, now)) return response(429, { error: 'Try again later' });
@@ -228,8 +236,10 @@ export function createAuthHandler({ fetcher = fetch, mailer = sendCode, clock = 
       const gate = path === '/v1/features/pro-foundation/check';
       return response(gate && entitlement.tier !== 'Pro' ? 403 : 200,
         { tier: entitlement.tier, reason: entitlement.reason, valid_until: entitlement.valid_until,
+          authorization_mode: entitlement.authorization_mode || 'none',
           ...(gate ? { allowed: entitlement.tier === 'Pro', feature: 'pro-foundation', commercial_feature: false } : {}) },
-        { 'X-RABBITX-Tier': entitlement.tier, 'X-RABBITX-Valid-Until': String(entitlement.valid_until || 0) });
+        { 'X-RABBITX-Tier': entitlement.tier, 'X-RABBITX-Valid-Until': String(entitlement.valid_until || 0),
+          'X-RABBITX-Authorization-Mode': entitlement.authorization_mode || 'none' });
     } catch {
       console.error('Account service unavailable');
       return response(503, { error: 'Account service unavailable; Pro access cannot be verified' });

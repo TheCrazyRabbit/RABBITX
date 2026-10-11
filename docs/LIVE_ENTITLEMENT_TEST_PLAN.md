@@ -67,7 +67,8 @@ routes must be 503 while disabled. Confirm old records unchanged with read-only 
    purchasing anything. Create a send-only API key. Use a private sender/reply mailbox;
    do not ask customers to post emails/tokens/billing identifiers in GitHub Issues.
 2. Create a Paddle **Live server API key**, restricted to customer.read,
-   subscription.read, transaction.read and adjustment.read. This is separate from the
+   subscription.read, transaction.read, adjustment.read and discount.read (restricted
+   acceptance proof). This is separate from the
    website live_ client-side token. No write permissions are needed or used.
 3. Put new secrets through `wrangler secret put` interactive prompts or Cloudflare
    Worker Settings → Variables and Secrets. Do not paste their values into chat, files,
@@ -102,7 +103,11 @@ to the deployment config so later deployments do not accidentally remove them.
 
 Do not execute this checklist until Paddle approval and separate owner authorization.
 Do not create a subscription or $0 order automatically. A real paid period is needed
-to validate the existing paid entitlement policy; a $0 test does not prove it.
+to validate the normal paid entitlement policy; a $0 test does not prove it.
+The owner-approved, diagnostic-only exception now has its own
+[strict zero-total acceptance plan](LIVE_ZERO_TOTAL_ACCEPTANCE.md). It defaults off,
+requires a single verified mailbox and canonical transaction/discount binding, and
+does not promote ordinary zero orders into paid rights.
 
 1. Confirm Live Website approval and final price/product in official checkout.
 2. With explicit owner authorization only, run Paddle's approved end-to-end procedure.
@@ -147,6 +152,32 @@ the documented configuration deploy if required; its handler only touches auth T
 
 No updated executable is automatically uploaded to GitHub Releases. Ship a reviewed
 new build, with version/release notes, only after the commercial/product blockers are resolved.
+
+## Additional local readiness stage (2026-10-11)
+
+37 backend tests now pass: the original 11 webhook regressions, authentication/state
+tests, restricted zero-total grant matching/expiry/revocation and read-only diagnostic checks.
+Migration 0002 was tested only in local SQLite, including repeat application preserving
+existing receipt rows. It has not been applied to Live. No new code was deployed,
+no production secret created/overwritten, no mail sent and no order/subscription created.
+Current local config retains AUTH_ENABLED=false and adds LIVE_ACCEPTANCE_ENABLED=false.
+
+See [ENTITLEMENT_CONFIGURATION](ENTITLEMENT_CONFIGURATION.md) for Resend registration,
+provider DNS and private key configuration. The operator readiness tool defaults offline;
+five real Paddle read checks require explicit --paddle-read and privately supplied credentials.
+The user chose local preparation because no Resend account exists yet.
+Public readiness checks are distinct from real email/transaction tests.
+
+Wrangler 4.149.0 local deploy --dry-run bundled the new module successfully (no upload).
+It declared the existing DB and both flags=false. A read-only public verification of
+the unchanged deployed service returned GET /200, unsigned live webhook/400 and
+GET /v1/entitlement/503. No signed notification or enabled-auth request was made.
+
+Before any later deployment, record the actual immediately preceding Worker version,
+preserve flag/DB/secret metadata, and obtain confirmation for migration/authorization rollout.
+An AUTH_ENABLED=false rollout remains mandatory until isolated delivery/security checks pass.
+The restricted acceptance flag and grant must be separately revoked at the end of acceptance.
+Code rollback leaves additive D1 tables in place; do not delete legacy customer/event data.
 
 ## Observed delivery verification (2026-10-11)
 

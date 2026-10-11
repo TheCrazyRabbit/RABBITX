@@ -162,7 +162,32 @@ records, and is safe to keep after rolling back code. AUTH_ENABLED defaults to f
 Production enabling is a distinct step after service setup, isolated tests and product
 readiness. Existing public v0.8 release artifacts are not automatically replaced.
 
-Sources used to verify payloads and behavior:
+### Restricted acceptance extension
+
+Normal paid-period authority is unchanged. The separate default-off
+LIVE_ACCEPTANCE_ENABLED exception is implemented in backend/live-acceptance.js and
+requires AUTH_TEST_EMAIL_SHA256, verified mailbox ownership, an owner-created exact
+canonical transaction/discount grant and a maximum two-hour expiry. This proves only
+the diagnostic pro-foundation integration, not a paid commercial feature. It has no
+public grant/extension endpoint and never writes a zero order into verified_paid_periods.
+Refund/dispute checks also apply before considering this exception.
+
+Responses add authorization_mode and X-RABBITX-Authorization-Mode:
+paid for a verified captured paid period, acceptance for the private diagnostic
+exception, none for Free. Existing tier/valid_until headers and status codes remain.
+Any future commercial feature API must require paid mode unless independently reviewed
+for a narrowly scoped acceptance test; do not generalize acceptance into all Pro rights.
+
+Restricted rollout denies non-allowlisted mailbox session checks and login completion,
+while returning an indistinguishable start response with a non-redeemable random challenge.
+Configuration validation is fail-closed and never reports values. New read-only Paddle
+calls pin API version 1. No browser origins or alternate billing hosts are added.
+
+Full setup and limits: [configuration](ENTITLEMENT_CONFIGURATION.md) and
+[Live zero-total plan](LIVE_ZERO_TOTAL_ACCEPTANCE.md). New 0002 schema/code remain local;
+production enabling and real acceptance each require owner confirmation.
+
+### API sources
 [customers](https://developer.paddle.com/api-reference/customers/list-customers/),
 [subscriptions](https://developer.paddle.com/api-reference/subscriptions/get-subscription/),
 [transactions](https://developer.paddle.com/api-reference/transactions/list-transactions/),

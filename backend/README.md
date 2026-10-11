@@ -96,7 +96,32 @@ Apply migrations/0001_entitlements.sql through Wrangler D1 migrations; it create
 
 Deploy impact, credential setup, isolated checks and rollback are documented in [LIVE_ENTITLEMENT_TEST_PLAN](../docs/LIVE_ENTITLEMENT_TEST_PLAN.md). Security/state policy is in [ENTITLEMENT_ARCHITECTURE](../docs/ENTITLEMENT_ARCHITECTURE.md). Commercial launch is still blocked by [PRO_ENTITLEMENTS](../docs/PRO_ENTITLEMENTS.md): no actual Pro-only capability is delivered yet.
 
-## References
+## Configuration and restricted acceptance preparation (2026-10-11)
+
+The next configuration stage is **local only**, with AUTH_ENABLED=false and
+LIVE_ACCEPTANCE_ENABLED=false. No new secrets, DNS records, remote migration or
+code deployment were performed for this stage. The new 0002 migration is prepared,
+not applied to Live. Existing production webhook behavior remains untouched.
+
+- [Configuration checklist](../docs/ENTITLEMENT_CONFIGURATION.md): Resend registration,
+  exact provider DNS, sending-only key, five Paddle read permissions, session secret helper.
+- [Strict zero-total acceptance](../docs/LIVE_ZERO_TOTAL_ACCEPTANCE.md): owner-confirmed
+  exact email/customer/subscription/transaction/discount match, capped at two hours,
+  diagnostic gate only; ordinary zero invoices never grant paid authorization.
+- `node tools/check-readiness.js` is offline by default. `--paddle-read` opts into
+  read-only Live GETs and never sends email or creates billing records. Diagnostics omit
+  secrets and customer data. Missing configuration intentionally returns exit code 1.
+- `configuration.example.json` is a non-secret template, not an active config file.
+- `tools/configure-session-secret.ps1` defaults to no action; `-Apply` requires operator
+  approval and only creates a missing AUTH_HASH_SECRET, never overwriting an existing one.
+- Acceptance requires AUTH_TEST_EMAIL_SHA256 and a manually approved D1 grant. No public
+  test grant route exists. Other mailboxes receive no mail/redeemable challenge in that mode.
+- Responses add authorization_mode and X-RABBITX-Authorization-Mode (paid/acceptance/none),
+  preserving existing routes, tier, expiry and status semantics. Acceptance is not paid access.
+- 37 backend tests passed locally (including all original 11 webhook regressions).
+  Real Resend delivery, actual Paddle read permissions and Live checkout remain unverified.
+
+## Reference links
 
 https://developers.cloudflare.com/workers/wrangler/commands/workers/
 https://developers.cloudflare.com/workers/wrangler/configuration/

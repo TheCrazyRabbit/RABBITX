@@ -2,5 +2,5 @@
   "name": "rabbitx-backend",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test tests/*.test.js" }
+  "scripts": { "test": "node --test tests/*.test.js", "readiness": "node tools/check-readiness.js" }
 }

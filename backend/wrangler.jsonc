@@ -6,7 +6,7 @@
   "account_id": "0bcafe02255715826df3999efb1ccee3",
   "compatibility_date": "2026-10-11",
   "keep_vars": true,
-  "vars": { "AUTH_ENABLED": "false" },
+  "vars": { "AUTH_ENABLED": "false", "LIVE_ACCEPTANCE_ENABLED": "false" },
   "triggers": { "crons": ["0 3 * * *"] },
   "d1_databases": [
     {
