@@ -216,6 +216,11 @@ RABBITX v0.9.0-beta - API Security Intelligence
 
 Usage:
 
+  RABBITX.exe --auth login|status|check|logout
+      Optional account commands; run separately from audit options.
+      Sign-in/status use the account service. check is a diagnostic Pro gate.
+      Core audits, projects, reports and offline Mock triage need no sign-in.
+
   RABBITX.exe <URL> --ai-triage mock [--ai-timeout-ms 2000]
       Offline Mock triage: evidence summary, review priority, recommendations.
       Mock output is not real model analysis. No recommendations are executed.
@@ -260,7 +265,8 @@ Usage:
 
   Config keys: targetUrl, projectName, maxRequests, minIntervalMs, timeoutMs,
       followRedirects, scope.hosts/domains/paths, outputFormat, outputPath,
-      reportOptions.includeEvidence/includeProbeHistory, persistProject.
+      reportOptions.includeEvidence/includeProbeHistory, persistProject,
+      aiTriage, aiTimeoutMs. Account credentials are not audit configuration.
 
   Runtime options include --timeout-ms <MILLISECONDS>, --follow-redirects,
   --no-follow-redirects, --include-evidence, --exclude-evidence,

@@ -1,5 +1,9 @@
 # Work 2 integration boundary
 
+For the combined Windows client and its verification, see
+[v0.9 client integration](V0.9_INTEGRATION_REPORT.md). Both modules coexist;
+AI subscription enforcement remains a future product decision.
+
 The optional product module is independent of payments/subscriptions.
 
 Stable client entry points:
