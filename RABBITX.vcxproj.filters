@@ -101,6 +101,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Infrastructure\Security\entitlement_client.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="Infrastructure\Security\entitlement_windows.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Infrastructure\Security\entitlement_client.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="Core\Context\request_budget.h">
       <Filter>头文件</Filter>
     </ClInclude>

@@ -1,4 +1,5 @@
 #include "cli.h"
+#include "Infrastructure/Security/entitlement_client.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -74,6 +75,8 @@ int wmain(
             argument.data());
     }
 
+    const int authResult = RabbitXAuth::RunCommand(argc, argumentPointers.data());
+    if (authResult >= 0) return authResult;
     return CLI::Run(
         argc,
         argumentPointers.data());

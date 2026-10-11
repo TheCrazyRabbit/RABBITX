@@ -6,11 +6,14 @@
   "account_id": "0bcafe02255715826df3999efb1ccee3",
   "compatibility_date": "2026-10-11",
   "keep_vars": true,
+  "vars": { "AUTH_ENABLED": "false" },
+  "triggers": { "crons": ["0 3 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "rabbitx-entitlements-live",
-      "database_id": "2b0518a0-f1b4-4e98-baa0-6001128f67f4"
+      "database_id": "2b0518a0-f1b4-4e98-baa0-6001128f67f4",
+      "migrations_dir": "migrations"
     }
   ],
   "routes": [

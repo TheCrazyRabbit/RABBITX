@@ -1,12 +1,12 @@
-# RABBITX Live webhook backend
+# RABBITX Live webhook and entitlement backend
 
-Live-only Cloudflare module Worker for rabbitx-backend. Deploy worker.js. No build or production npm dependencies are required. No C++ or frontend changes, schema migrations, entitlement API, license, login, JWT or client logic are included.
+Live-only Cloudflare module Worker for rabbitx-backend. Deploy the worker.js module bundle with Wrangler (it imports entitlements.js); pasting worker.js alone into an editor no longer suffices. No production npm dependencies are required. Optional native-client email/session/entitlement APIs are disabled by default, with additive migrations. No JWT, license server, device fingerprinting or public mock grants are implemented.
 
 ## Routes and configuration
 
 - GET / → 200, {"service":"rabbitx-backend","status":"ok"}. This does not verify DB or secret configuration.
 - POST /webhooks/paddle/live → verify Paddle-Signature using env.PADDLE_LIVE_WEBHOOK_SECRET, then write using env.DB.
-- Other paths/methods return 404. The original and Sandbox webhook routes are removed.
+- /v1/* → optional native-client account service; 503 while AUTH_ENABLED=false. See the architecture document for routes. Other paths/methods return 404. Original/Sandbox webhook routes remain removed.
 
 Required Cloudflare settings:
 
@@ -14,9 +14,9 @@ Required Cloudflare settings:
 - D1 binding DB → existing rabbitx-entitlements-live, with the existing subscriptions and webhook_events tables.
 - Secret PADDLE_LIVE_WEBHOOK_SECRET → endpoint secret for the existing Paddle Live notification destination. Never place its value in source, Git, logs or the website. It is neither a client-side token nor an API key.
 
-## Verified deployment (11 October 2026)
+## Original webhook deployment baseline (11 October 2026)
 
-The Live Worker has been deployed to the existing rabbitx-backend and api.crazyrabbit.dev.
+The original Live webhook Worker was deployed to rabbitx-backend and api.crazyrabbit.dev. The version below is the rollback baseline, not a claim that it includes the new optional auth APIs.
 
 - Active version: 09f15d1e-a79c-4e29-9a7a-3e288aaa4868 (100%).
 - Actual D1 binding verified after deploy: DB → rabbitx-entitlements-live, ID 2b0518a0-f1b4-4e98-baa0-6001128f67f4. The previous binding name was DB_LIVE; deployment corrected its name without changing the database or data.
@@ -36,7 +36,7 @@ From repository root:
 
 ```powershell
 npx wrangler whoami
-node --test backend/tests/worker.test.js
+node --test backend/tests/*.test.js
 npx wrangler deploy --config backend/wrangler.jsonc --dry-run
 npx wrangler deploy --config backend/wrangler.jsonc --keep-vars
 npx wrangler deployments status --config backend/wrangler.jsonc
@@ -88,7 +88,13 @@ node --check backend/worker.js
 node --test backend/tests/worker.test.js
 ```
 
-11 tests cover health, removed routes, missing header/secret/DB, correct signatures, tampering, raw Unicode/whitespace, timestamp expiry, subscription lifecycle/items, cancellation retention, transaction receipt-only behavior, idempotency, out-of-order delivery and atomic rollback. Tests use local fixture secrets and in-memory SQLite; they do not prove Cloudflare deployment.
+The original 11 webhook regression tests and additional entitlement tests run production SQL in local in-memory SQLite with mocked billing/email. They do not prove a real Paddle transaction, real mail delivery or enabled production auth. Native integration/tests are in Infrastructure/Security and tests/entitlement_client_tests.*.
+
+## Entitlement rollout
+
+Apply migrations/0001_entitlements.sql through Wrangler D1 migrations; it creates only new tables and never promotes existing webhook rows to rights. AUTH_ENABLED remains false in wrangler.jsonc. Required new Worker secrets: PADDLE_API_KEY (Live read-only), RESEND_API_KEY, AUTH_HASH_SECRET (independent random 32+ characters). Non-secret configuration: AUTH_MAIL_FROM and PRO_PRICE_IDS. Existing PADDLE_LIVE_WEBHOOK_SECRET is untouched. No credential goes into source or Git.
+
+Deploy impact, credential setup, isolated checks and rollback are documented in [LIVE_ENTITLEMENT_TEST_PLAN](../docs/LIVE_ENTITLEMENT_TEST_PLAN.md). Security/state policy is in [ENTITLEMENT_ARCHITECTURE](../docs/ENTITLEMENT_ARCHITECTURE.md). Commercial launch is still blocked by [PRO_ENTITLEMENTS](../docs/PRO_ENTITLEMENTS.md): no actual Pro-only capability is delivered yet.
 
 ## References
 

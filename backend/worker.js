@@ -1,4 +1,5 @@
-// Cloudflare module Worker. Deploy this file to rabbitx-backend.
+import { handleAuth, pruneAuth } from './entitlements.js';
+// Cloudflare module Worker. Deploy the module bundle to rabbitx-backend.
 // Live-only webhook: PADDLE_LIVE_WEBHOOK_SECRET + existing D1 binding DB.
 const SIGNATURE_TOLERANCE_SECONDS = 5;
 const SUBSCRIPTION_EVENTS = new Set([
@@ -70,7 +71,12 @@ function subscriptionStatement(db, event) {
 }
 
 export default {
+  async scheduled(_event, env) {
+    if (env.AUTH_ENABLED === 'true' && env.DB) await pruneAuth(env.DB);
+  },
   async fetch(request, env) {
+    const auth = await handleAuth(request, env);
+    if (auth) return auth;
     const path = new URL(request.url).pathname;
     if (request.method === "GET" && path === "/") {
       return reply(200, { service: "rabbitx-backend", status: "ok" });

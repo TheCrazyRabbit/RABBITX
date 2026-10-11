@@ -130,6 +130,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Infrastructure\Security\entitlement_client.cpp" />
+    <ClCompile Include="Infrastructure\Security\entitlement_windows.cpp" />
     <ClCompile Include="Core\Context\request_budget.cpp" />
     <ClCompile Include="Core\Context\request_rate_limiter.cpp" />
     <ClCompile Include="Core\Context\audit_configuration.cpp" />
@@ -160,6 +162,7 @@
     <ClCompile Include="Infrastructure\Security\scope_policy.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Infrastructure\Security\entitlement_client.h" />
     <ClInclude Include="Core\Context\request_budget.h" />
     <ClInclude Include="Core\Context\request_rate_limiter.h" />
     <ClInclude Include="Core\Context\audit_configuration.h" />
