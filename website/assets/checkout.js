@@ -1,15 +1,15 @@
 "use strict";
 
-// MANUAL CONFIGURATION: Sandbox client-side token and Sandbox monthly Price ID.
-// Never paste an API key or a live token here.
-const PADDLE_CLIENT_TOKEN = "test_29fd7d63174276d00fc0fa9bb8c";
-const RABBITX_PRO_PRICE_ID = "pri_01m4crb2b3tqxc3d5hwmqyg0f8";
+// MANUAL CONFIGURATION: Live client-side token (live_...) and Live monthly Price ID (pri_...).
+// Never paste an API key or any server-side credential here.
+const PADDLE_CLIENT_TOKEN = "PASTE_LIVE_CLIENT_TOKEN_HERE";
+const RABBITX_PRO_PRICE_ID = "PASTE_LIVE_PRICE_ID_HERE";
 
-const TOKEN_PLACEHOLDER = "PASTE_TEST_CLIENT_TOKEN_HERE";
-const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
+const TOKEN_PLACEHOLDER = "PASTE_LIVE_CLIENT_TOKEN_HERE";
+const PRICE_PLACEHOLDER = "PASTE_LIVE_PRICE_ID_HERE";
 
 (() => {
-  const button = document.getElementById("open-test-checkout");
+  const button = document.getElementById("subscribe-checkout");
   const status = document.getElementById("checkout-status");
   const panel = document.getElementById("paddle-checkout");
 
@@ -37,17 +37,17 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
     PADDLE_CLIENT_TOKEN === TOKEN_PLACEHOLDER ||
     RABBITX_PRO_PRICE_ID === PRICE_PLACEHOLDER
   ) {
-    setStatus("Paddle Sandbox credentials not configured.");
+    setStatus("Live Paddle checkout is not configured.");
     return;
   }
 
   // Basic format validation.
   if (
-    !/^test_[a-zA-Z0-9]+$/.test(PADDLE_CLIENT_TOKEN) ||
+    !/^live_[a-zA-Z0-9]+$/.test(PADDLE_CLIENT_TOKEN) ||
     !/^pri_[a-zA-Z0-9]+$/.test(RABBITX_PRO_PRICE_ID)
   ) {
     setStatus(
-      "Invalid Sandbox configuration. Use a test_ client-side token and a Sandbox pri_ Price ID."
+      "Invalid Live configuration. Use a live_ client-side token and the Live monthly pri_ Price ID."
     );
     return;
   }
@@ -55,7 +55,6 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
   // Ensure Paddle.js loaded correctly.
   if (
     !window.Paddle ||
-    !window.Paddle.Environment ||
     !window.Paddle.Initialize ||
     !window.Paddle.Checkout
   ) {
@@ -68,8 +67,8 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
   const paddle = window.Paddle;
 
   try {
-    paddle.Environment.set("sandbox");
 
+    // Paddle.js defaults to Live. No environment override is used.
     paddle.Initialize({
       token: PADDLE_CLIENT_TOKEN,
 
@@ -80,19 +79,19 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
 
         if (event.name === "checkout.loaded") {
           setStatus(
-            "Paddle Sandbox checkout is open. Test checkout only — no real charge will be made."
+            "Paddle checkout is open."
           );
         } else if (event.name === "checkout.completed") {
           setStatus(
-            "Sandbox test checkout completed. No real charge was made. Check Paddle Sandbox Transactions."
+            "Payment completed successfully. Your subscription is being processed. Subscription access must be confirmed by the server."
           );
         } else if (event.name === "checkout.closed") {
           setStatus(
-            "Sandbox checkout closed. You can open another test checkout."
+            "Paddle checkout closed."
           );
         } else if (event.name === "checkout.error") {
           setStatus(
-            "Sandbox checkout encountered an error. Check the Sandbox token, Price ID and Paddle configuration."
+            "Paddle checkout encountered an error. Please try again or contact support."
           );
         }
       }
@@ -103,15 +102,15 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
     panel.dataset.checkoutEnabled = "true";
 
     setStatus(
-      "Ready to open Paddle Sandbox checkout. Test checkout only — no real charge will be made."
+      "Ready to open Paddle checkout."
     );
   } catch (error) {
     disable();
 
-    console.error("Paddle initialization error:", error);
+    console.error("Paddle checkout initialization failed");
 
     setStatus(
-      "Paddle Sandbox initialization failed. Check the browser console for details."
+      "Paddle checkout initialization failed. Please reload or contact support."
     );
 
     return;
@@ -123,14 +122,14 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
     }
 
     setStatus(
-      "Opening Paddle Sandbox checkout. No real charge will be made."
+      "Opening Paddle checkout..."
     );
 
     const failed = (error) => {
-      console.error("Paddle checkout error:", error);
+      console.error("Paddle checkout could not open");
 
       setStatus(
-        "Could not open Sandbox checkout. Check the Sandbox configuration and browser console."
+        "Could not open Paddle checkout. Please try again or contact support."
       );
     };
 
@@ -149,9 +148,7 @@ const PRICE_PLACEHOLDER = "PASTE_SANDBOX_PRICE_ID_HERE";
         }
       });
 
-      if (result && typeof result.then === "function") {
-        result.catch(failed);
-      }
+      Promise.resolve(result).catch(failed);
     } catch (error) {
       failed(error);
     }

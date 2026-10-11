@@ -1,32 +1,34 @@
-# Crazy Rabbit website
+# Crazy Rabbit website — Paddle Live checkout
 
-Buildless static site. Deploy only `website/`, never the repository root or release archives.
-Original copy and styling adapted from docs/pricing.html, PRICING.md, BETA_OUTREACH.md and CONFIGURATION.md. No C++ changes.
+Buildless static site with the existing purple theme. Deploy website/ only. No backend or C++ changes.
 
-## Local preview
-Run `python -m http.server 8787 --bind 127.0.0.1 --directory website` from the repository root and visit http://127.0.0.1:8787/.
+## Required manual configuration
 
-## Cloudflare Pages
-Connect TheCrazyRabbit/RABBITX in Workers & Pages → Pages → Import an existing Git repository. Choose the intended production branch, framework None, build command empty, root directory repository root, output directory website. Deploy. In the Pages project → Custom domains → Set up a custom domain, add crazyrabbit.dev and confirm the DNS record Cloudflare proposes. Verify HTTPS and all seven routes before submitting the domain to Paddle.
+File: website/assets/checkout.js
 
-## Before live sales / domain submission
-The site honestly describes the current Beta, proposal and disabled payment flow. Approval is not guaranteed. Review policies and identify the seller consistently with the Paddle account; confirm a suitable private support/billing contact before live sales. The GitHub public contact is for general questions only. Publish specific refund eligibility and time window, cancellation/renewal rules, final plan limits and tax information before collecting money.
+- Search PASTE_LIVE_CLIENT_TOKEN_HERE and replace it with the Paddle Live client-side token (live_...).
+- Search PASTE_LIVE_PRICE_ID_HERE and replace it with RABBITX Pro's Live recurring monthly Price ID (pri_...). The prefix alone does not identify a price's environment; copy it from the Live catalog.
 
-## Paddle Sandbox checkout
-Only website/assets/checkout.js holds the manual configuration. Search PASTE_TEST_CLIENT_TOKEN_HERE and replace it with the Sandbox client-side token (test_...). Search PASTE_SANDBOX_PRICE_ID_HERE and replace it with the Sandbox RABBITX Pro US$24/month recurring Price ID (pri_...). Never use an API key or live token. A pri_ prefix alone does not identify the environment: copy it from Sandbox.
+The user requested placeholders for this migration. Until both are filled, checkout is disabled and displays Live Paddle checkout is not configured. Only public client-side configuration belongs here; never use an API key, webhook secret or Cloudflare credential.
 
-Client-side token: Paddle Sandbox → Developer tools → Authentication → Client-side tokens (dashboard labels may also appear under account Settings → Authentication).
-Price ID: Paddle Sandbox → Catalog → Products → RABBITX Pro → $24/month price → Price ID.
+Paddle.js defaults to Live. There is no environment override. The official dark overlay receives one price with quantity 1. No customer is prefilled and no browser event grants Pro access. Server webhook records remain authoritative; this change implements no entitlement API or license provisioning.
 
-The button remains disabled if either value is a placeholder, the format is invalid, or the SDK cannot initialize. Paddle.Environment.set("sandbox") always precedes Initialize. Clicking opens a dark overlay with one price and quantity 1. No PricePreview, backend, API key, webhook, entitlement or license provisioning is included.
+## Preview and deployment
 
-Set Paddle Sandbox → Checkout → Checkout configuration → Default payment link to https://crazyrabbit.dev/checkout/ if not already configured. After replacing the values, commit and push website/ to main for Cloudflare Pages to redeploy. Test from https://crazyrabbit.dev/checkout/ (local file browsing is for visual review, not the end-to-end Paddle test).
+From the repository root: python -m http.server 8787 --bind 127.0.0.1 --directory website
+Open http://127.0.0.1:8787/. Local file browsing also works for navigation. Test actual payment overlay opening from https://crazyrabbit.dev/checkout/ after configuring and deploying.
 
-Use card 4242 4242 4242 4242, any valid future expiry, CVV 100, any name, an email you own and valid country/postal details. Complete the test and check Sandbox Transactions. No real payment or product access is created. Never treat a browser success event as fulfillment confirmation.
+Cloudflare Pages imports GitHub main, framework None, output directory website. Push website changes to trigger deployment. The checkout JS URL includes a version query to avoid reusing older cached code. Bump it whenever changing the checkout configuration or script.
 
-## Sources
-https://developers.cloudflare.com/pages/framework-guides/deploy-anything/
-https://developers.cloudflare.com/pages/configuration/custom-domains/
-https://www.paddle.com/help/start/account-verification/what-is-domain-verification
+## Live verification
 
+Check homepage, product, pricing, checkout and policy pages. Confirm product RABBITX Pro, US$24/month, monthly billing and final totals in Paddle checkout. Do not submit a paid transaction automatically. Any actual payment must be explicitly chosen by the user.
+
+Paddle Live default payment link: https://crazyrabbit.dev/checkout/. Existing Live webhook URL: https://api.crazyrabbit.dev/webhooks/paddle/live. This task does not modify Worker, D1, products, tokens in the Paddle dashboard or notification destinations.
+
+Privacy/Terms/Refund describe recurring billing, cancellation and Paddle payment processing. The public Beta still has no paid feature gate or automated license delivery; do not claim that checkout completion grants access.
+
+## References
 https://developer.paddle.com/build/checkout/build-overlay-checkout/
+https://www.paddle.com/legal/privacy
+https://www.paddle.com/legal/refund-policy
