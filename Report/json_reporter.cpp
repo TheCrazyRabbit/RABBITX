@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "parameter_intelligence.h"
+#include "ai_triage_engine.h"
 
 namespace
 {
@@ -154,6 +155,10 @@ namespace
     {
         out << indent << "{\n";
 
+        out << indent << "  \"id\": " << Quote(evidence.id) << ",\n"
+            << indent << "  \"bodySha256\": " << Quote(evidence.bodySha256) << ",\n"
+            << indent << "  \"responseSha256\": " << Quote(evidence.responseSha256) << ",\n";
+
         out << indent
             << "  \"method\": "
             << Quote(evidence.method)
@@ -260,6 +265,7 @@ namespace
         bool includeEvidence)
     {
         out << indent << "{\n";
+        out << indent << "  \"status\": " << Quote(FindingStatusToString(finding.status)) << ",\n";
 
         out << indent
             << "  \"ruleId\": "
@@ -351,7 +357,8 @@ namespace JsonReporter
 
         out << "{\n";
 
-        out << "  \"reportSchemaVersion\": \"1.3\",\n";
+        out << "  \"reportSchemaVersion\": \"1.4\",\n"
+            << "  \"productVersion\": \"v0.9.0-beta\",\n";
 
         out << "  \"targetUrl\": "
             << QuoteUrl(result.targetUrl)
@@ -375,7 +382,19 @@ namespace JsonReporter
         out << "\n  },\n";
 
         const auto& configuration = result.configuration;
+        out << "  \"aiTriage\": " << AITriageEngine::Serialize(result.aiTriage) << ",\n";
+        out << "  \"evidenceCatalog\": [";
+        for(size_t i=0;i<result.evidenceCatalog.size();++i)
+        {
+            if(i)out << ',';
+            if(configuration.reportOptions.includeEvidence)WriteEvidence(out,result.evidenceCatalog[i],"    ");
+            else out << "{\"id\":" << Quote(result.evidenceCatalog[i].id) << ",\"detailsOmitted\":true}";
+        }
+        out << "],\n";
         out << "  \"effectiveConfiguration\": {\n"
+            << "    \"aiTriage\": " << (configuration.aiTriage?"true":"false") << ",\n"
+            << "    \"aiProvider\": " << Quote(configuration.aiTriage?"mock":"none") << ",\n"
+            << "    \"aiTimeoutMs\": " << configuration.aiTimeoutMs << ",\n"
             << "    \"targetUrl\": " << QuoteUrl(configuration.targetUrl) << ",\n"
             << "    \"projectName\": " << Quote(configuration.projectName) << ",\n"
             << "    \"maxRequests\": " << configuration.maxRequests << ",\n"
@@ -477,6 +496,9 @@ namespace JsonReporter
                 result.endpoints[i];
 
             out << "    {\n";
+
+            out << "      \"discoveryEvidenceIds\": ";
+            WriteStringArray(out,endpoint.discoveryEvidenceIds);out << ",\n";
 
             out << "      \"url\": "
                 << QuoteUrl(endpoint.url)

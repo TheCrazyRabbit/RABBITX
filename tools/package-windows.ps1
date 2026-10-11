@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^[0-9A-Za-z.-]+$')]
-    [string]$Version = 'v0.8.0-beta'
+    [string]$Version = 'v0.9.0-beta'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,17 +59,20 @@ try {
 
     $packageDocs = Join-Path $stagePath 'docs'
     New-Item -ItemType Directory -Path $packageDocs | Out-Null
-    foreach ($file in @('CONFIGURATION.md', 'PRICING.md', 'pricing.html')) {
+    foreach ($file in @('CONFIGURATION.md', 'PRICING.md', 'pricing.html', 'AI_TRIAGE.md', 'AI_TRIAGE_INTEGRATION.md', 'V0.9_DEVELOPMENT_REPORT.md')) {
         Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs\$file") -Destination $packageDocs
     }
+
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\schemas') -Destination $packageDocs -Recurse
 
     $packageExamples = Join-Path $stagePath 'examples'
     $packageReports = Join-Path $packageExamples 'reports'
     New-Item -ItemType Directory -Path $packageReports -Force | Out-Null
-    foreach ($file in @('README.md', 'rabbitx.example.json', 'Start-DemoServer.ps1')) {
+    foreach ($file in @('README.md', 'rabbitx.example.json', 'rabbitx.ai-mock.json', 'Start-DemoServer.ps1')) {
         Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples\$file") -Destination $packageExamples
     }
     Copy-Item -LiteralPath (Join-Path $repositoryRoot 'examples\reports\demo-security-posture.html') -Destination $packageReports
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'examples\reports\demo-ai-triage.html') -Destination $packageReports
 
     [System.IO.File]::WriteAllText(
         (Join-Path $stagePath 'VERSION.txt'),

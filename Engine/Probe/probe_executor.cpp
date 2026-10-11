@@ -1,20 +1,7 @@
 #include "probe_executor.h"
+#include <set>
 
-namespace
-{
-    Evidence BuildEvidence(
-        const HttpResponse& response)
-    {
-        Evidence evidence;
-        evidence.method = response.method;
-        evidence.requestedUrl = response.requestedUrl;
-        evidence.finalUrl = response.finalUrl;
-        evidence.statusCode = response.statusCode;
-        evidence.observation =
-            "Planned probe response captured.";
-        return evidence;
-    }
-}
+
 
 std::vector<ProbeResult>
 ProbeExecutor::Execute(
@@ -25,10 +12,13 @@ ProbeExecutor::Execute(
 )
 {
     std::vector<ProbeResult> results;
+    std::set<std::string> visited;
 
 
     for (const auto& task : tasks)
     {
+        // Plans may express several review reasons for the same baseline GET.
+        if(!visited.insert(task.method+" "+task.url).second)continue;
         results.push_back(
             ExecuteOne(task, configuration, requestBudget, requestRateLimiter)
         );
@@ -49,6 +39,11 @@ ProbeExecutor::ExecuteOne(
 )
 {
     ProbeResult result;
+    if(task.method!="GET")
+    {
+        result.error="Probe method rejected: only baseline GET is implemented.";
+        return result;
+    }
 
 
     result.probe.id =
@@ -73,12 +68,12 @@ result.probe.description =
 
         result.error = result.response.error;
 
-        if (result.response.statusCode == 0)
+        if (result.response.statusCode == 0 || result.response.disposition != HttpRequestDisposition::Succeeded || !result.response.error.empty())
         {
             return result;
         }
 
-        result.evidence = BuildEvidence(
+        result.evidence = CaptureEvidence(
             result.response);
 
         result.executed = true;

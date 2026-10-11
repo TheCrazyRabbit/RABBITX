@@ -1,4 +1,5 @@
 #include "project_store.h"
+#include "Core/Models/strict_json.h"
 
 #include <chrono>
 #include <cctype>
@@ -659,6 +660,14 @@ namespace
         }
 
         configuration.timeoutMs = static_cast<int>(timeoutMs);
+        if(FindValueStart(json,"aiTriage")!=std::string::npos &&
+            !ReadBoolProperty(json,"aiTriage",configuration.aiTriage))return false;
+        if(FindValueStart(json,"aiTimeoutMs")!=std::string::npos)
+        {
+            size_t value=0;
+            if(!ReadSizeProperty(json,"aiTimeoutMs",value)||value<1||value>60000)return false;
+            configuration.aiTimeoutMs=static_cast<int>(value);
+        }
         return true;
     }
 
@@ -889,6 +898,14 @@ bool ProjectStore::Load(
     if (!ReadWholeFile(path, json, error))
         return false;
 
+    if(json.size()>=3 && json.substr(0,3)=="\xef\xbb\xbf")json.erase(0,3);
+    try
+    {
+        if(StrictJson::Reader(json,64*1024*1024,1000000).Parse().kind!=StrictJson::Value::Kind::Object)
+            throw std::runtime_error("Project root must be an object");
+    }
+    catch(const std::exception& e){error="Invalid project JSON: "+std::string(e.what());return false;}
+
     int version = 0;
 
     if (!ReadVersion(json, version) ||
@@ -1033,6 +1050,7 @@ bool ProjectStore::Save(
     }
 
     if (project.defaultConfiguration.minIntervalMs > 86400000 ||
+        project.defaultConfiguration.aiTimeoutMs < 1 || project.defaultConfiguration.aiTimeoutMs > 60000 ||
         project.defaultConfiguration.timeoutMs <= 0 ||
         project.defaultConfiguration.timeoutMs > MaximumTimeoutMs)
     {
@@ -1084,6 +1102,8 @@ bool ProjectStore::Save(
         << "  \"createdAtUtc\": " << Quote(project.createdAtUtc) << ",\n"
         << "  \"updatedAtUtc\": " << Quote(project.updatedAtUtc) << ",\n"
         << "  \"defaultConfiguration\": {\n"
+        << "    \"aiTriage\": " << (project.defaultConfiguration.aiTriage?"true":"false") << ",\n"
+        << "    \"aiTimeoutMs\": " << project.defaultConfiguration.aiTimeoutMs << ",\n"
         << "    \"maxRequests\": " << project.defaultConfiguration.maxRequests << ",\n"
         << "    \"minIntervalMs\": " << project.defaultConfiguration.minIntervalMs << ",\n"
         << "    \"timeoutMs\": " << project.defaultConfiguration.timeoutMs << ",\n"

@@ -2,31 +2,7 @@
 
 #include "http_client.h"
 
-namespace
-{
-    Evidence BuildEvidence(
-        const HttpResponse& response)
-    {
-        Evidence evidence;
 
-        evidence.method =
-            response.method;
-
-        evidence.requestedUrl =
-            response.requestedUrl;
-
-        evidence.finalUrl =
-            response.finalUrl;
-
-        evidence.statusCode =
-            response.statusCode;
-
-        evidence.observation =
-            "Baseline HTTP response captured.";
-
-        return evidence;
-    }
-}
 
 ProbeResult ProbeEngine::Execute(
     const Probe& probe,
@@ -56,13 +32,13 @@ ProbeResult ProbeEngine::Execute(
 
     result.error = result.response.error;
 
-    if (result.response.statusCode == 0)
+    if (result.response.statusCode == 0 || result.response.disposition != HttpRequestDisposition::Succeeded || !result.response.error.empty())
     {
         return result;
     }
 
     result.evidence =
-        BuildEvidence(result.response);
+        CaptureEvidence(result.response);
 
     result.executed = true;
 

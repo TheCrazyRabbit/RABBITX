@@ -149,7 +149,7 @@
     <ClCompile Include="Core\Models\finding.cpp" />
     <ClCompile Include="Infrastructure\Network\http_client.cpp" />
     <ClCompile Include="Report\json_reporter.cpp" />
-    <ClCompile Include="Application\main.cpp" />
+    <ClCompile Include="Application\main.cpp" Condition="'$(RabbitxTests)'!='true'" />
     <ClCompile Include="Core\Models\parameter.cpp" />
     <ClCompile Include="Engine\Intelligence\parameter_intelligence.cpp" />
     <ClCompile Include="Engine\Pipeline\pipeline.cpp" />
@@ -193,6 +193,19 @@
     <ClInclude Include="Engine\Probe\probe_task.h" />
     <ClInclude Include="Infrastructure\Security\security_checks.h" />
     <ClInclude Include="Infrastructure\Security\scope_policy.h" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(RabbitxTests)'=='true'">
+    <TargetName>RABBITX-tests</TargetName>
+    <IntDir>$(ProjectDir)x64\$(Configuration)\client-tests\</IntDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Intelligence\ai_triage_engine.cpp" />
+    <ClCompile Include="Infrastructure\AI\mock_ai_provider.cpp" />
+    <ClCompile Include="tools\tests\client_tests.cpp" Condition="'$(RabbitxTests)'=='true'" />
+    <ClInclude Include="Engine\Intelligence\ai_triage_engine.h" />
+    <ClInclude Include="Infrastructure\AI\ai_provider.h" />
+    <ClInclude Include="Core\Models\ai_triage.h" />
+    <ClInclude Include="Core\Models\strict_json.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

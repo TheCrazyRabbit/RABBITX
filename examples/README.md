@@ -1,5 +1,14 @@
 # Local Beta demos
 
+For a v0.9 development build, start the same demo server and run:
+
+```powershell
+.\RABBITX.exe --config .\examples\rabbitx.ai-mock.json
+.\RABBITX.exe --config .\examples\rabbitx.ai-mock.json --html --output .\mock-triage.html
+```
+
+This demonstration is explicitly labeled **Mock / Offline** and uses no real AI service. A generated example is in `examples/reports/demo-ai-triage.html`. From a source checkout, use `x64\Release\RABBITX.exe` after building. See [AI_TRIAGE.md](../docs/AI_TRIAGE.md).
+
 All three examples use a tiny HTTP server bound only to `127.0.0.1`. The routes, identifiers, headers, and cookies are synthetic. No public site is contacted.
 
 ## Start the fixture server

@@ -193,14 +193,23 @@ namespace SecurityChecks
                 "HTTPS responses should use HSTS to instruct browsers to keep using HTTPS.");
         }
 
-        AddMissingHeader(
-            findings,
-            response,
-            "Content-Security-Policy",
-            "headers.csp.missing",
-            "Missing Content Security Policy",
-            "A CSP can reduce the impact of content injection by restricting allowed resources.");
+        bool html=false;
+        for(const auto& type:HeaderValues(response,"Content-Type"))
+            if(Lower(type).find("text/html")!=std::string::npos || Lower(type).find("application/xhtml+xml")!=std::string::npos)html=true;
+        if(html) AddMissingHeader(findings,response,"Content-Security-Policy","headers.csp.missing",
+            "Missing Content Security Policy","An HTML response has no CSP; review document context and content injection exposure.");
 
+        bool frameAncestors=false;
+        for(const auto& csp:HeaderValues(response,"Content-Security-Policy"))
+        {
+            size_t start=0;
+            while(start<csp.size())
+            {
+                const auto end=csp.find(';',start);auto directive=Lower(Trim(csp.substr(start,end==std::string::npos?end:end-start)));
+                if(directive.rfind("frame-ancestors ",0)==0 || directive.rfind("frame-ancestors\t",0)==0)frameAncestors=true;
+                if(end==std::string::npos)break;start=end+1;
+            }
+        }
         AddMissingHeader(
             findings,
             response,
@@ -209,7 +218,7 @@ namespace SecurityChecks
             "Missing X-Content-Type-Options",
             "Set nosniff to prevent browsers from guessing a different content type.");
 
-        AddMissingHeader(
+        if(html && !frameAncestors) AddMissingHeader(
             findings,
             response,
             "X-Frame-Options",
@@ -333,10 +342,17 @@ namespace SecurityChecks
             const bool httpOnly =
                 HasToken(cookie, "httponly");
 
-            const bool sameSite =
-                Lower(cookie).find(
-                    "samesite=") !=
-                std::string::npos;
+            bool sameSite=false;
+            size_t attr=cookie.find(';');
+            while(attr!=std::string::npos)
+            {
+                const auto next=cookie.find(';',attr+1);
+                auto token=Lower(Trim(cookie.substr(attr+1,next==std::string::npos?next:next-attr-1)));
+                auto equals=token.find('=');
+                if(equals!=std::string::npos && Trim(token.substr(0,equals))=="samesite")
+                {auto v=Trim(token.substr(equals+1));if(v=="strict"||v=="lax"||v=="none")sameSite=true;}
+                attr=next;
+            }
 
             if (!secure)
             {

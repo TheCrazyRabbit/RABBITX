@@ -4,6 +4,15 @@
 
 #include "parameter_intelligence.h"
 
+const char* FindingStatusToString(FindingStatus status)
+{
+    switch(status) {
+    case FindingStatus::Confirmed: return "confirmed";
+    case FindingStatus::Candidate: return "candidate";
+    default: return "informational";
+    }
+}
+
 namespace
 {
     const char* SeverityToString(
@@ -45,6 +54,7 @@ namespace
 void PrintFinding(
     const Finding& finding)
 {
+    std::cout << "      Assessment: " << FindingStatusToString(finding.status) << '\n';
     std::cout
         << "["
         << SeverityToString(finding.severity)

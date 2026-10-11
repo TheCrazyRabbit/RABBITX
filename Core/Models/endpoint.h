@@ -56,6 +56,8 @@ struct Endpoint
     std::vector<Parameter> parameters;
 
     RiskScore riskScore;
+
+    std::vector<std::string> discoveryEvidenceIds;
 };
 
 const char* EndpointClassToString(

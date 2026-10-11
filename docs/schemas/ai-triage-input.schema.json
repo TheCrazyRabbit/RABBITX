@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RABBITX sanitized AI context 1.0",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "untrustedInput", "omittedSubjects", "subjects", "facts"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"}, "untrustedInput": {"const": true},
+    "omittedSubjects": {"type": "integer", "minimum": 0},
+    "subjects": {"type": "array", "maxItems": 64, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "url", "kind", "riskScore", "description", "evidenceIds", "factIds", "parameterSignals", "riskFactors"],
+      "properties": {
+        "id": {"type": "string"}, "url": {"type": "string", "maxLength": 8192},
+        "kind": {"enum": ["endpoint", "finding"]},
+        "riskScore": {"type": "integer", "minimum": 0, "maximum": 100},
+        "description": {"type": "string"},
+        "evidenceIds": {"$ref": "#/$defs/strings"}, "factIds": {"$ref": "#/$defs/strings"},
+        "parameterSignals": {"$ref": "#/$defs/strings"}, "riskFactors": {"$ref": "#/$defs/strings"}
+      }
+    }},
+    "facts": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "evidenceId", "description"],
+      "properties": {"id": {"type": "string"}, "evidenceId": {"type": "string"}, "description": {"type": "string"}}
+    }}
+  },
+  "$defs": {"strings": {"type": "array", "items": {"type": "string"}}}
+}

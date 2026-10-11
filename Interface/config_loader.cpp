@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "scope_policy.h"
+#include "Core/Models/strict_json.h"
 
 namespace
 {
@@ -479,6 +480,18 @@ namespace
             AuditConfigurationOverrides& overrides,
             std::string& error)
         {
+            if(key == "aiTriage")
+            {
+                bool value=false;
+                if(!ReadBoolean(value))return Fail(error,"aiTriage must be a boolean.");
+                overrides.aiTriage=value;return true;
+            }
+            if(key == "aiTimeoutMs")
+            {
+                size_t value=0;
+                if(!ReadUnsigned(value)||value<1||value>60000)return Fail(error,"aiTimeoutMs must be between 1 and 60000.");
+                overrides.aiTimeoutMs=static_cast<int>(value);return true;
+            }
             if (key == "targetUrl" || key == "projectName" || key == "outputPath")
             {
                 std::string value;
@@ -587,6 +600,8 @@ namespace ConfigurationFile
             contents.erase(0, 3);
         }
 
+        try { StrictJson::Parse(contents); }
+        catch(const std::exception& e){error="Invalid configuration JSON: "+std::string(e.what());return false;}
         JsonReader reader(contents);
         return reader.ReadConfiguration(overrides, error);
     }
@@ -595,6 +610,8 @@ namespace ConfigurationFile
         const AuditConfigurationOverrides& overrides,
         AuditConfiguration& configuration)
     {
+        if(overrides.aiTriage)configuration.aiTriage=*overrides.aiTriage;
+        if(overrides.aiTimeoutMs)configuration.aiTimeoutMs=*overrides.aiTimeoutMs;
         if (overrides.targetUrl) configuration.targetUrl = *overrides.targetUrl;
         if (overrides.projectName) configuration.projectName = *overrides.projectName;
         if (overrides.maxRequests) configuration.maxRequests = *overrides.maxRequests;

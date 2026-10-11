@@ -529,6 +529,19 @@ namespace ParameterIntelligence
     std::string RedactSensitiveValues(
         const std::string& url)
     {
+        // Userinfo and fragments can carry credentials outside the query string.
+        std::string sanitized=url;
+        const auto scheme=sanitized.find("://");
+        if(scheme!=std::string::npos)
+        {
+            const auto end=sanitized.find_first_of("/?#",scheme+3);
+            const auto at=sanitized.find('@',scheme+3);
+            if(at!=std::string::npos && (end==std::string::npos||at<end))
+                sanitized.replace(scheme+3,at-(scheme+3),"[REDACTED]");
+        }
+        const auto fragment=sanitized.find('#');
+        if(fragment!=std::string::npos)sanitized.erase(fragment);
+        if(sanitized!=url)return RedactSensitiveValues(sanitized);
         const size_t queryStart =
             url.find('?');
 

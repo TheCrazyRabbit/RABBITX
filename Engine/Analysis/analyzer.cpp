@@ -18,6 +18,12 @@ namespace
             {
                 target.push_back(finding);
             }
+            else
+            {
+                for(auto& existing:target)
+                    if(existing.ruleId==finding.ruleId && existing.evidence.find(finding.evidence)==std::string::npos)
+                        existing.evidence += "; " + finding.evidence;
+            }
         }
     }
 
@@ -71,7 +77,7 @@ std::vector<Finding> Analyzer::Analyze(
 std::vector<Finding> Analyzer::AnalyzeProbe(
     const ProbeResult& result)
 {
-    if (!result.executed)
+    if (!result.executed || result.response.disposition != HttpRequestDisposition::Succeeded)
         return {};
 
     auto findings =
@@ -80,6 +86,12 @@ std::vector<Finding> Analyzer::AnalyzeProbe(
     AttachEvidence(
         findings,
         result.evidence);
+
+    for(auto& finding:findings)
+    {
+        finding.status=(finding.category=="cookie" || finding.category=="cors" || finding.ruleId=="redirect.https-downgrade")
+            ? FindingStatus::Candidate : FindingStatus::Informational;
+    }
 
     return findings;
 }

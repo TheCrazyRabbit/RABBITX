@@ -8,6 +8,8 @@
 #include <string>
 #include <cctype>
 #include <set>
+#include <algorithm>
+#include <charconv>
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -83,6 +85,8 @@ namespace
 
     std::string Win32Error(DWORD error)
     {
+        if(error == ERROR_WINHTTP_TIMEOUT)
+            return "HTTP timeout (WinHTTP 12002).";
         if (error == ERROR_SUCCESS)
             return {};
 
@@ -191,22 +195,25 @@ namespace
                 components.dwExtraInfoLength);
         }
 
+        const auto fragment=path.find(L'#');
+        if(fragment!=std::wstring::npos)path.erase(fragment);
         return WideToUtf8(path);
     }
 
-    std::string ReadResponseBody(
-        HINTERNET request)
+    bool ReadResponseBody(
+        HINTERNET request, std::string& body, std::string& error)
     {
-        std::string body;
-
         DWORD available = 0;
-
-        while (WinHttpQueryDataAvailable(
-            request,
-            &available))
+        const size_t maximumBodyBytes=8*1024*1024;
+        while (true)
         {
+            if(!WinHttpQueryDataAvailable(request,&available))
+            {error="Unable to read HTTP body: "+Win32Error(GetLastError());return false;}
             if (available == 0)
                 break;
+
+            if(body.size()+available>maximumBodyBytes)
+            {error="HTTP response exceeds the 8 MiB body limit; partial response is not analyzed.";return false;}
 
             std::vector<BYTE> buffer(
                 available);
@@ -219,7 +226,8 @@ namespace
                 available,
                 &downloaded))
             {
-                break;
+                error="Unable to read HTTP body: "+Win32Error(GetLastError());
+                return false;
             }
 
             if (downloaded == 0)
@@ -231,10 +239,10 @@ namespace
                 downloaded);
         }
 
-        return body;
+        return true;
     }
 
-    void ReadHeaders(
+    bool ReadHeaders(
         HINTERNET request,
         HttpResponse& response)
     {
@@ -251,7 +259,7 @@ namespace
         if (GetLastError() !=
             ERROR_INSUFFICIENT_BUFFER)
         {
-            return;
+            return false;
         }
 
         std::vector<wchar_t> buffer(
@@ -266,7 +274,7 @@ namespace
             &headerSize,
             WINHTTP_NO_HEADER_INDEX))
         {
-            return;
+            return false;
         }
 
         std::wstring rawHeaders(
@@ -306,10 +314,9 @@ namespace
                     value.begin());
             }
 
-            response.headers[
-                WideToUtf8(key)] =
-                WideToUtf8(value);
+            response.headers.emplace(WideToUtf8(key),WideToUtf8(value));
         }
+        return true;
     }
 
     bool IsRedirectStatus(
@@ -524,7 +531,7 @@ static HttpResponse GetOnce(
 
     HINTERNET session =
         WinHttpOpen(
-            L"RABBITX/0.4",
+            L"RABBITX/0.9.0-beta",
             WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
             WINHTTP_NO_PROXY_NAME,
             WINHTTP_NO_PROXY_BYPASS,
@@ -552,12 +559,16 @@ static HttpResponse GetOnce(
         ? 15000
         : timeoutMs;
 
-    WinHttpSetTimeouts(
+    if(!WinHttpSetTimeouts(
         session,
         resolveTimeoutMs,
         connectTimeoutMs,
         sendTimeoutMs,
-        receiveTimeoutMs);
+        receiveTimeoutMs))
+    {
+        response.error="Unable to configure HTTP phase timeouts: "+Win32Error(GetLastError());
+        WinHttpCloseHandle(session);return response;
+    }
 
     HINTERNET connection =
         WinHttpConnect(
@@ -614,6 +625,14 @@ static HttpResponse GetOnce(
         ? WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS
         : WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
 
+    DWORD headerTimeout=static_cast<DWORD>(receiveTimeoutMs);
+    if(!WinHttpSetTimeouts(request,resolveTimeoutMs,connectTimeoutMs,sendTimeoutMs,receiveTimeoutMs) ||
+        !WinHttpSetOption(request,WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT,&headerTimeout,sizeof(headerTimeout)))
+    {
+        response.error="Unable to configure HTTP request/header timeouts: "+Win32Error(GetLastError());
+        WinHttpCloseHandle(request);WinHttpCloseHandle(connection);WinHttpCloseHandle(session);return response;
+    }
+
     if (!WinHttpSetOption(
         request,
         WINHTTP_OPTION_REDIRECT_POLICY,
@@ -633,7 +652,7 @@ static HttpResponse GetOnce(
 
     const wchar_t* headers =
         L"Accept: */*\r\n"
-        L"User-Agent: RABBITX/0.4\r\n";
+        L"User-Agent: RABBITX/0.9.0-beta\r\n";
 
     if (!requestBudget.TryBeginRequest())
     {
@@ -719,16 +738,34 @@ static HttpResponse GetOnce(
 
     response.statusCode =
         static_cast<int>(statusCode);
-    response.disposition = HttpRequestDisposition::Succeeded;
-
-    requestBudget.RecordSuccessfulRequest();
-
-    ReadHeaders(
-        request,
-        response);
-
-    response.body =
-        ReadResponseBody(request);
+    if(!ReadHeaders(request,response))
+        response.error="Unable to read HTTP response headers: "+Win32Error(GetLastError());
+    else
+        ReadResponseBody(request,response.body,response.error);
+    if(response.error.empty())
+    {
+        for(const auto& header:response.headers)
+        {
+            std::string name=header.first;
+            std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return char(std::tolower(c));});
+            if(name=="content-length" && response.statusCode!=204 && response.statusCode!=304)
+            {
+                size_t length=0;auto parsed=std::from_chars(header.second.data(),header.second.data()+header.second.size(),length);
+                if(parsed.ec!=std::errc{}||parsed.ptr!=header.second.data()+header.second.size()||length!=response.body.size())
+                    response.error="HTTP body length does not match Content-Length; partial response is not analyzed.";
+            }
+        }
+    }
+    if(response.error.empty())
+    {
+        response.disposition=HttpRequestDisposition::Succeeded;
+        requestBudget.RecordSuccessfulRequest();
+    }
+    else
+    {
+        response.disposition=HttpRequestDisposition::Failed;
+        requestBudget.RecordFailedRequest();
+    }
 
     DWORD urlSize = 0;
 
@@ -825,6 +862,7 @@ HttpResponse HttpClient::Get(
 
     std::string currentUrl = url;
     std::set<std::string> visitedUrls;
+    std::vector<Evidence> completedHops;
     visitedUrls.insert(currentUrl);
 
     for (size_t redirectCount = 0; redirectCount <= 10; ++redirectCount)
@@ -857,6 +895,9 @@ HttpResponse HttpClient::Get(
             configuration.timeoutMs,
             configuration.useLegacyTimeoutProfile);
         hopResponse.requestedUrl = url;
+        if(hopResponse.disposition==HttpRequestDisposition::Succeeded)
+            completedHops.push_back(CaptureEvidence(hopResponse));
+        hopResponse.completedHopEvidence=completedHops;
 
         if (redirectCount > 0 && hopResponse.statusCode == 0)
         {

@@ -12,6 +12,7 @@
 #include "request_budget.h"
 #include "request_rate_limiter.h"
 #include "scope_policy.h"
+#include "Core/Models/ai_triage.h"
 
 struct AuditResult
 {
@@ -30,6 +31,8 @@ struct AuditResult
     RequestBudgetStats requestBudget;
 
     AuditConfiguration configuration;
+    std::vector<Evidence> evidenceCatalog;
+    AITriageResult aiTriage;
 };
 
 class Pipeline

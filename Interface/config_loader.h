@@ -20,6 +20,8 @@ struct AuditConfigurationOverrides
     std::optional<bool> persistProject;
     std::optional<bool> includeEvidence;
     std::optional<bool> includeProbeHistory;
+    std::optional<bool> aiTriage;
+    std::optional<int> aiTimeoutMs;
 };
 
 namespace ConfigurationFile

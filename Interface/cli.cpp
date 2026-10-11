@@ -42,6 +42,8 @@ namespace
         std::optional<bool> includeEvidence;
         std::optional<bool> includeProbeHistory;
         std::optional<bool> persistProject;
+        std::optional<bool> aiTriage;
+        std::optional<int> aiTimeoutMs;
 
         std::string outputPath;
         bool outputPathSpecified = false;
@@ -210,9 +212,14 @@ namespace
     void PrintHelp()
     {
         std::cout << R"(
-RABBITX - API Security Intelligence
+RABBITX v0.9.0-beta - API Security Intelligence
 
 Usage:
+
+  RABBITX.exe <URL> --ai-triage mock [--ai-timeout-ms 2000]
+      Offline Mock triage: evidence summary, review priority, recommendations.
+      Mock output is not real model analysis. No recommendations are executed.
+      Use --no-ai-triage to disable config/project defaults. No API fees.
 
   RABBITX.exe
       Start interactive mode.
@@ -353,6 +360,11 @@ Commands:
             return 1;
         }
 
+        if(configuration.outputFormat==AuditOutputFormat::Console)
+        {
+            ConsoleUI::PrintRequestStart();
+            std::cout << "[i] Scope, request budget and rate limit are active.\n";
+        }
         const AuditResult result =
             Pipeline::Run(configuration);
 
@@ -409,7 +421,7 @@ Commands:
             std::string error;
 
             if (!HTMLReporter::WriteToFile(
-                project ? project->name : "Standalone audit",
+                project ? project->name : (configuration.projectName.empty() ? "Standalone audit" : configuration.projectName),
                 runNumber,
                 reportTime,
                 jsonText,
@@ -465,7 +477,7 @@ Commands:
             return completed ? 0 : 1;
         }
 
-        ConsoleUI::PrintRequestStart();
+        std::cout << "\n[ Audit Results ]\n";
 
         if (configuration.reportOptions.includeProbeHistory)
         {
@@ -528,6 +540,20 @@ Commands:
             << "[+] Probe history in report: " << (configuration.reportOptions.includeProbeHistory ? "yes" : "no") << '\n';
 
         const auto& budget = result.requestBudget;
+        if(configuration.aiTriage)
+        {
+            std::cout << "\n[ AI Triage - MOCK / OFFLINE ]\n"
+                << "Status: " << result.aiTriage.status << " | Provider: " << result.aiTriage.provider << '\n';
+            if(!result.aiTriage.error.empty())std::cout << result.aiTriage.error << '\n';
+            for(const auto& item:result.aiTriage.items)
+            {
+                std::cout << item.subjectId << " | Review priority " << item.priority << " | " << item.assessment << '\n'
+                    << "Unverified provider hypothesis: " << item.possibleRisk << "\nUncertainty: " << item.uncertainty << "\nMissing validation: " << item.missingValidation << '\n'
+                    << "Evidence: ";
+                for(const auto& id:item.evidenceIds)std::cout << id << ' ';
+                std::cout << "\nNext: " << item.nextAction.reason << " | " << item.nextAction.policyDecision << "\n";
+            }
+        }
         std::cout
             << "\n[ Request Budget ]\n"
             << "[+] Limit: " << budget.maxRequestsPerRun << '\n'
@@ -573,6 +599,24 @@ Commands:
         {
             const std::string arg =
                 argv[i];
+
+            if(arg=="--version") {std::cout << "RABBITX v0.9.0-beta\n";options.help=true;return true;}
+            if(arg=="--ai-triage")
+            {
+                if(i+1>=argc || std::string(argv[++i])!="mock")
+                {std::cerr << "[-] --ai-triage requires 'mock'; real providers are not enabled.\n";return false;}
+                options.aiTriage=true;continue;
+            }
+            if(arg=="--no-ai-triage") {options.aiTriage=false;continue;}
+            if(arg=="--ai-timeout-ms")
+            {
+                if(i+1>=argc){std::cerr << "[-] Missing AI timeout.\n";return false;}
+                std::string value=argv[++i];int parsed=0;
+                auto r=std::from_chars(value.data(),value.data()+value.size(),parsed);
+                if(r.ec!=std::errc{}||r.ptr!=value.data()+value.size()||parsed<1||parsed>60000)
+                {std::cerr << "[-] --ai-timeout-ms requires an integer from 1 to 60000.\n";return false;}
+                options.aiTimeoutMs=parsed;continue;
+            }
 
             if (arg == "--json")
             {
@@ -852,6 +896,7 @@ Commands:
     bool HasRunOverrides(const CliOptions& options)
     {
         return options.maxRequestsSpecified ||
+            options.aiTriage.has_value() || options.aiTimeoutMs.has_value() ||
             options.minIntervalSpecified ||
             options.timeoutSpecified ||
             options.followRedirects.has_value() ||
@@ -866,6 +911,8 @@ Commands:
         AuditConfiguration& configuration,
         std::string& error)
     {
+        if(options.aiTriage)configuration.aiTriage=*options.aiTriage;
+        if(options.aiTimeoutMs)configuration.aiTimeoutMs=*options.aiTimeoutMs;
         if (!options.url.empty())
             configuration.targetUrl = options.url;
         if (!options.projectName.empty())

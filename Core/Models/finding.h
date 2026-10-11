@@ -18,13 +18,16 @@ enum class Confidence
     High
 };
 
+enum class FindingStatus { Informational, Candidate, Confirmed };
+const char* FindingStatusToString(FindingStatus status);
+
 struct Finding
 {
     std::string ruleId;
     std::string category;
 
-    Severity severity;
-    Confidence confidence;
+    Severity severity = Severity::Info;
+    Confidence confidence = Confidence::Low;
 
     std::string title;
     std::string description;
@@ -34,6 +37,7 @@ struct Finding
     Evidence requestEvidence;
 
     std::vector<Evidence> relatedEvidence;
+    FindingStatus status = FindingStatus::Informational;
 };
 
 void PrintFinding(

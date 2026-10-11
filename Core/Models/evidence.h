@@ -17,4 +17,12 @@ struct Evidence
     std::string bodyExcerpt;
 
     std::string observation;
+
+    std::string id; // Run-local stable reference, preserved in saved reports.
+    std::string bodySha256;
+    std::string responseSha256;
 };
+
+struct HttpResponse;
+Evidence CaptureEvidence(const HttpResponse& response);
+bool SameEvidenceSnapshot(const Evidence& left, const Evidence& right);

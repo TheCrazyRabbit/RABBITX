@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="源文件">
@@ -198,5 +198,14 @@
     <ClInclude Include="Core\Models\probe_result.h">
       <Filter>头文件</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Intelligence\ai_triage_engine.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="Infrastructure\AI\mock_ai_provider.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="tools\tests\client_tests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Engine\Intelligence\ai_triage_engine.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Infrastructure\AI\ai_provider.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Core\Models\ai_triage.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Core\Models\strict_json.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
 </Project>

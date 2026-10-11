@@ -48,4 +48,8 @@ struct AuditConfiguration
     std::string outputPath;
     ReportOptions reportOptions;
     bool persistProject = true;
+
+    // Optional per-run module; no entitlement decision is made here.
+    bool aiTriage = false;
+    int aiTimeoutMs = 2000;
 };

@@ -1,4 +1,6 @@
-# RABBITX v0.8 Beta
+# RABBITX v0.9.0-beta development
+
+The published baseline remains **v0.8.0-beta**. This development branch adds an optional **offline Mock triage** demonstration; no real model API is enabled. See [the v0.9 guide](docs/AI_TRIAGE.md) for building, testing and local examples, and [the client integration boundary](docs/AI_TRIAGE_INTEGRATION.md) for Work 2.
 
 **Prioritize risky API endpoints and produce reproducible evidence with fewer requests.**
 
@@ -16,7 +18,7 @@ RABBITX helps a researcher decide where to look next. Its risk scores and findin
 - JSON and standalone HTML reports with scope, budget, effective configuration, and evidence.
 - A local-only demo server and three reproducible walkthroughs.
 
-This is a CLI beta, not a hosted service. AI triage and account or license management are not included in v0.8.
+The v0.9 optional triage list summarizes recorded facts, prioritizes human review and explains missing validation. Each item references evidence IDs. It is explicitly labeled Mock, preserves the existing finding certainty, and executes no recommendations.
 
 ## Windows download
 
@@ -24,7 +26,7 @@ Download the [RABBITX v0.8.0 Beta Windows x64 archive](https://github.com/TheCra
 
 Extract the archive and open PowerShell in the extracted folder. The archive includes `RABBITX.exe`, this guide, the example configuration, the local demo server, and a sample HTML report.
 
-The release binary targets Windows x64 and statically links the MSVC runtime. It uses Windows WinHTTP for network requests and does not bundle third-party scanning libraries.
+The v0.9 release build targets Windows 10/11 x64 and statically links the MSVC runtime. It uses Windows WinHTTP for network requests and does not bundle third-party scanning libraries.
 
 Maintainers can rebuild the archive from source with:
 
@@ -59,7 +61,7 @@ Create and resume a project:
 Load a JSON configuration. Project defaults are applied first, then the file, then CLI options. A resume uses those values for that run without changing the saved defaults.
 
 ```powershell
-.\RABBITX.exe --config .\examples\rabbitx.example.json https://authorized.example
+.\RABBITX.exe --config .\examples\rabbitx.example.json
 ```
 
 That sample is deliberately scoped to the local demo server. For an authorized external target, edit both `targetUrl` and the allowlisted host/domain/path values. See [the configuration guide](docs/CONFIGURATION.md).
@@ -89,7 +91,7 @@ Feedback that is most useful:
 - Discovery is based on the responses RABBITX fetches. It is not a full browser crawler and does not execute application JavaScript.
 - Endpoint risk is prioritization, not a vulnerability verdict.
 - Probe plans are bounded and evidence-focused; run them only within explicit authorization.
-- The beta does not implement AI triage, cloud accounts, team collaboration, or paid feature gates.
+- The product development branch includes Mock triage. Real AI providers and approved recommendation execution are deferred; commercial authorization is owned by a separate work stream.
 
 ## Responsible use
 
@@ -97,4 +99,4 @@ Use RABBITX only on systems you own or are explicitly authorized to assess, incl
 
 ## Project status
 
-RABBITX v0.8 is the Product Beta baseline. The next development slice is v0.9 AI Security Triage: explainable endpoint/finding prioritization and a small, reviewable next action. It will not run unbounded scans.
+RABBITX v0.8 is the published Product Beta baseline. v0.9.0-beta development provides an offline evidence-to-triage flow and client reliability improvements. A formal GitHub Release needs the owner's release decision.

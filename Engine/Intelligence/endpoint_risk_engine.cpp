@@ -339,9 +339,14 @@ void EndpointRiskEngine::Analyze(
     Endpoint& endpoint)
 {
     endpoint.riskScore = RiskScore();
+    endpoint.classification=EndpointClass::Unknown;
+    endpoint.riskHints.clear();
 
-    const std::string url =
-        Lower(endpoint.url);
+    std::string url=Lower(endpoint.url);
+    const auto scheme=url.find("://");
+    if(scheme!=std::string::npos){auto slash=url.find('/',scheme+3);url=slash==std::string::npos?"/":url.substr(slash);}
+    const auto query=url.find_first_of("?#");
+    if(query!=std::string::npos)url.erase(query);
 
     /*
      * Authentication surface

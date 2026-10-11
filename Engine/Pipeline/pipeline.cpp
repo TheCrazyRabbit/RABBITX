@@ -8,6 +8,9 @@
 #include "probe_engine.h"
 #include "probe_planner.h"
 #include "probe_executor.h"
+#include "ai_triage_engine.h"
+#include <algorithm>
+#include <memory>
 
 namespace
 {
@@ -28,14 +31,7 @@ namespace
         const Evidence& left,
         const Evidence& right)
     {
-        return left.method == right.method &&
-            left.requestedUrl == right.requestedUrl &&
-            left.finalUrl == right.finalUrl &&
-            left.statusCode == right.statusCode &&
-            left.requestHeaders == right.requestHeaders &&
-            left.responseHeaders == right.responseHeaders &&
-            left.bodyExcerpt == right.bodyExcerpt &&
-            left.observation == right.observation;
+        return SameEvidenceSnapshot(left, right);
     }
 
     void AddEvidenceIfNew(
@@ -95,6 +91,8 @@ namespace
             }
 
             Finding& merged = target[existing->second];
+            if(merged.evidence.find(incoming.evidence)==std::string::npos)
+                merged.evidence += "; " + incoming.evidence;
 
             if (incoming.severity == Severity::Low)
                 merged.severity = Severity::Low;
@@ -161,12 +159,27 @@ AuditResult Pipeline::Run(
     result.scopePolicy = configuration.scope;
     result.configuration = configuration;
 
+    auto registerEvidence = [&](ProbeResult& probeResult)
+    {
+        for(auto& hop:probeResult.response.completedHopEvidence)
+        {
+            auto existing=std::find_if(result.evidenceCatalog.begin(),result.evidenceCatalog.end(),[&](const Evidence& e){return SameEvidenceSnapshot(e,hop);});
+            if(existing!=result.evidenceCatalog.end())hop.id=existing->id;
+            else {hop.id="evidence-"+std::to_string(result.evidenceCatalog.size()+1);result.evidenceCatalog.push_back(hop);}
+        }
+        if(!probeResult.executed) return;
+        for(const auto& e:result.evidenceCatalog)
+            if(SameEvidenceSnapshot(e,probeResult.evidence)){probeResult.evidence.id=e.id;return;}
+        probeResult.evidence.id="evidence-"+std::to_string(result.evidenceCatalog.size()+1);
+        result.evidenceCatalog.push_back(probeResult.evidence);
+    };
+
     const auto probes =
         ProbeEngine::DefaultProbes();
 
     for (const auto& probe : probes)
     {
-        const ProbeResult probeResult =
+        ProbeResult probeResult =
             ProbeEngine::Execute(
                 probe,
                 configuration.targetUrl,
@@ -174,6 +187,7 @@ AuditResult Pipeline::Run(
                 requestBudget,
                 requestRateLimiter);
 
+        registerEvidence(probeResult);
         result.probes.push_back(
             probeResult);
 
@@ -187,17 +201,21 @@ AuditResult Pipeline::Run(
 
         if (probeResult.executed)
         {
-            const auto endpoints =
+            auto endpoints =
                 EndpointIntelligence::Analyze(
                     probeResult.response);
 
-            result.endpoints.insert(
-                result.endpoints.end(),
-                endpoints.begin(),
-                endpoints.end());
+            for(auto& endpoint:endpoints)
+            {
+                endpoint.discoveryEvidenceIds.push_back(probeResult.evidence.id);
+                auto found=std::find_if(result.endpoints.begin(),result.endpoints.end(),[&](const Endpoint& e){return e.url==endpoint.url&&e.method==endpoint.method;});
+                if(found==result.endpoints.end()) result.endpoints.push_back(std::move(endpoint));
+                else if(std::find(found->discoveryEvidenceIds.begin(),found->discoveryEvidenceIds.end(),probeResult.evidence.id)==found->discoveryEvidenceIds.end())found->discoveryEvidenceIds.push_back(probeResult.evidence.id);
+            }
         }
     }
 
+    std::stable_sort(result.endpoints.begin(),result.endpoints.end(),[](const Endpoint& a,const Endpoint& b){return a.riskScore.value>b.riskScore.value;});
     result.probePlans =
         ProbePlanner::BuildPlans(
             result.endpoints);
@@ -212,7 +230,7 @@ AuditResult Pipeline::Run(
         );
     }
 
-    const auto probeResults =
+    auto probeResults =
         ProbeExecutor::Execute(
             tasks,
             configuration,
@@ -221,8 +239,9 @@ AuditResult Pipeline::Run(
 
 
 
-    for (const auto& probeResult : probeResults)
+    for (auto& probeResult : probeResults)
     {
+        registerEvidence(probeResult);
         result.probes.push_back(
             probeResult
         );
@@ -240,5 +259,7 @@ AuditResult Pipeline::Run(
     }
 
     result.requestBudget = requestBudget.Snapshot();
+    if(configuration.aiTriage)
+        result.aiTriage=AITriageEngine::Run(result,std::make_shared<MockAIProvider>(),configuration.aiTimeoutMs);
     return result;
 }

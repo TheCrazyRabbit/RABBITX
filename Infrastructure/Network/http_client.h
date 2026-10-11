@@ -2,6 +2,8 @@
 
 #include <map>
 #include <string>
+#include <vector>
+#include "evidence.h"
 
 #include "request_budget.h"
 #include "request_rate_limiter.h"
@@ -36,9 +38,12 @@ struct HttpResponse
     HttpRequestDisposition disposition =
         HttpRequestDisposition::NotAttempted;
 
-    std::map<std::string, std::string> headers;
+    // Repeated Set-Cookie and other header fields must survive parsing.
+    std::multimap<std::string, std::string> headers;
 
     std::string body;
+    // Completed redirect responses survive a later scope/budget/network stop.
+    std::vector<Evidence> completedHopEvidence;
 };
 
 class HttpClient

@@ -1,0 +1,14 @@
+{
+  "targetUrl": "http://127.0.0.1:8787/case-1",
+  "projectName": "RABBITX v0.9 Offline Mock Demo",
+  "maxRequests": 8,
+  "minIntervalMs": 200,
+  "timeoutMs": 8000,
+  "followRedirects": true,
+  "scope": {"hosts": ["127.0.0.1:8787"], "domains": [], "paths": ["/case-1"]},
+  "aiTriage": true,
+  "aiTimeoutMs": 2000,
+  "outputFormat": "console",
+  "reportOptions": {"includeEvidence": true, "includeProbeHistory": true},
+  "persistProject": true
+}
